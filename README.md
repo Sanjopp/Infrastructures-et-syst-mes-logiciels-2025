@@ -7,3 +7,40 @@ Pre-commit automatically formats your code before each commit, ensuring that all
 - Install Pre-commit: `pip install pre-commit`
 - Set up Pre-commit in your project: `pre-commit install`
 Once installed, Pre-commit will automatically run the defined checks and formatting before each commit.
+
+## Run the app with Docker
+
+This project uses Docker Compose to build and run the app. Make sure you have Docker Engine installed and running on your machine.
+
+### First time setup
+
+To build the images and start the app for the first time:
+
+```bash
+docker compose up --build
+```
+
+This will:
+- Build the backend and frontend images
+- Start the backend service with the tricount data as a persistent volume
+- Start the frontend service that depends on the backend one
+
+### Future use
+
+Once the images have been built, you can start the app with:
+
+```bash
+docker compose up
+```
+
+### Accessing the app
+
+The app is will be running at http://localhost:5173
+
+### Stopping the app
+
+To stop and remove all running containers:
+
+```bash
+docker compose down
+```
