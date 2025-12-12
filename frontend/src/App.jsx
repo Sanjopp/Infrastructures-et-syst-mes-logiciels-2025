@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = "http://127.0.0.1:5001/api";
 
 function App() {
   const [theme, setTheme] = useState("dark");
