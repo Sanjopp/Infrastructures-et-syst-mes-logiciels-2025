@@ -276,7 +276,7 @@ export default function Dashboard({ user, onLogout }) {
         throw new Error(data.error || "Erreur lors de la suppression du tricount.");
       }
 
-      
+
       setSelectedTricount(null);
       setSelectedId(null);
 
@@ -287,7 +287,7 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
-  
+
   const balances = selectedTricount?.balances || {};
   const settlements = selectedTricount?.settlements || [];
 
@@ -346,7 +346,7 @@ export default function Dashboard({ user, onLogout }) {
                         <span className="text-[10px] text-slate-400">{t.currency}</span>
                       </div>
                       <div className="text-[10px] text-slate-500">
-                        {t.users_count} users • {t.expenses_count} exp
+                        {t.users_count} Utilisateurs • {t.expenses_count} Dépenses
                       </div>
                     </button>
                   </li>
