@@ -6,7 +6,4 @@ __pycache__/
 
 *.ipynb
 
-data/*.json
-backend/data/*.json
-
-!data/.gitkeep
+data/
