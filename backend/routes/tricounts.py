@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 
 from backend.models.currency import Currency
 from backend.models.tricount import Tricount
@@ -6,6 +6,8 @@ from backend.services.balance import compute_balances
 from backend.services.settlement import compute_settlements
 from backend.utils.auth_storage import load_users
 from backend.utils.tricount_storage import load_tricounts, save_tricounts
+from backend.services.export import export_tricount_to_excel
+
 
 tricount_bp = Blueprint("tricounts", __name__)
 
@@ -189,3 +191,20 @@ def delete_expense(tricount_id: str, expense_id: str):
     save_tricounts(tricounts)
 
     return jsonify(tricount_with_balances_to_dict(t)), 200
+
+
+@tricount_bp.route("/<tricount_id>/export/excel", methods=["GET"])
+def export_tricount_excel(tricount_id: str):
+    tricount = find_tricount(tricount_id)
+    if tricount is None:
+        return jsonify({"error": "Not found"}), 404
+
+    output = export_tricount_to_excel(tricount)
+    filename = f"tricount_{(tricount.name or tricount.id).replace(' ', '_')}.xlsx"
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )

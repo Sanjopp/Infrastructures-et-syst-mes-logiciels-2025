@@ -227,6 +227,36 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
+  async function handleExportExcel() {
+    if (!selectedTricount) return;
+
+    try {
+      const res = await fetch(
+        `/api/tricounts/${selectedTricount.id}/export/excel`
+      );
+
+      if (!res.ok) {
+        throw new Error("Export failed");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${selectedTricount.name || "tricount"}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      setError("Erreur lors de l'export Excel.");
+    }
+  }
+
+  
   const balances = selectedTricount?.balances || {};
   const settlements = selectedTricount?.settlements || [];
 
@@ -330,6 +360,14 @@ export default function Dashboard({ user, onLogout }) {
                  <h2 className="text-lg font-semibold">{selectedTricount.name}</h2>
                  <p className="text-xs text-slate-500">Devise : {selectedTricount.currency}</p>
               </div>
+
+              <button
+                onClick={handleExportExcel}
+                className="text-xs bg-emerald-500 text-white px-3 py-1 rounded hover:bg-emerald-600"
+              >
+                Export Excel
+              </button>
+            
             </section>
 
             <div className="grid grid-cols-2 gap-4">
