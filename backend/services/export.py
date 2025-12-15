@@ -11,10 +11,10 @@ def export_tricount_to_excel(tricount: Tricount) -> BytesIO:
     """
     Exporte un Tricount en fichier Excel (en mémoire).
 
-    Feuilles:
-      - Expenses: description, amount, currency, payer, participants
-      - Balances: user, balance
-      - Settlements: from, to, amount
+    Feuilles :
+        - Dépenses : description, montant, devise, payeur, participants
+        - Soldes : utilisateur, solde
+        - Règlements : de, vers, montant
 
     Retour: BytesIO prêt à être envoyé par Flask (send_file).
     """
@@ -22,8 +22,9 @@ def export_tricount_to_excel(tricount: Tricount) -> BytesIO:
 
     # Expenses
     ws_exp = wb.active
-    ws_exp.title = "Expenses"
-    ws_exp.append(["Description", "Amount", "Currency", "Payer", "Participants"])
+    ws_exp.title = "Dépenses"
+    ws_exp.append(["Description", "Montant", "Devise", "Payeur", "Participants"]
+)
 
     for expense in tricount.expenses:
         payer_name = ""
@@ -51,16 +52,16 @@ def export_tricount_to_excel(tricount: Tricount) -> BytesIO:
         )
 
     # Balances
-    ws_bal = wb.create_sheet(title="Balances")
-    ws_bal.append(["User", "Balance"])
+    ws_bal = wb.create_sheet(title="Soldes")
+    ws_bal.append(["Utilisateur", "Solde"])
 
     balances = compute_balances(tricount)
     for user in tricount.users:
         ws_bal.append([user.name, round(balances.get(user.id, 0.0), 2)])
 
     # Settlements
-    ws_set = wb.create_sheet(title="Settlements")
-    ws_set.append(["From", "To", "Amount"])
+    ws_set = wb.create_sheet(title="Règlements")
+    ws_set.append(["De", "Vers", "Montant"])
 
     settlements = compute_settlements(balances)
     for from_id, to_id, amount in settlements:

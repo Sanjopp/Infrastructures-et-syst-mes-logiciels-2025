@@ -208,3 +208,18 @@ def export_tricount_excel(tricount_id: str):
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+@tricount_bp.route("/<tricount_id>", methods=["DELETE"])
+def delete_tricount(tricount_id: str):
+   
+    tricount = find_tricount(tricount_id)
+    if tricount is None:
+        return jsonify({"error": "Tricount introuvable"}), 404
+
+    
+    tricounts[:] = [t for t in tricounts if t.id != tricount_id]
+
+    save_tricounts(tricounts)
+
+
+    return "", 204

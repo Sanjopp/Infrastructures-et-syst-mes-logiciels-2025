@@ -255,6 +255,37 @@ export default function Dashboard({ user, onLogout }) {
       setError("Erreur lors de l'export Excel.");
     }
   }
+  async function handleDeleteTricount() {
+    if (!selectedTricount) return;
+
+    const confirmed = window.confirm(
+      "Êtes-vous sûr de vouloir supprimer ce tricount ? Cette action est définitive."
+    );
+    if (!confirmed) return;
+
+    try {
+      setError("");
+
+      const res = await fetch(
+        `/api/tricounts/${selectedTricount.id}`,
+        { method: "DELETE" }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Erreur lors de la suppression du tricount.");
+      }
+
+      
+      setSelectedTricount(null);
+      setSelectedId(null);
+
+      await loadTricounts();
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "Erreur réseau lors de la suppression.");
+    }
+  }
 
   
   const balances = selectedTricount?.balances || {};
@@ -360,14 +391,21 @@ export default function Dashboard({ user, onLogout }) {
                  <h2 className="text-lg font-semibold">{selectedTricount.name}</h2>
                  <p className="text-xs text-slate-500">Devise : {selectedTricount.currency}</p>
               </div>
+              <div className="flex gap-2">
 
-              <button
-                onClick={handleExportExcel}
-                className="text-xs bg-emerald-500 text-white px-3 py-1 rounded hover:bg-emerald-600"
-              >
-                Export Excel
-              </button>
-            
+                <button
+                  onClick={handleExportExcel}
+                  className="text-xs bg-emerald-500 text-white px-3 py-1 rounded hover:bg-emerald-600"
+                >
+                  Exporter Excel
+                </button>
+                <button
+                  onClick={handleDeleteTricount}
+                  className="text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  Supprimer
+                </button>
+              </div>
             </section>
 
             <div className="grid grid-cols-2 gap-4">
