@@ -1,14 +1,15 @@
 import json
 import os
 from dataclasses import asdict
+from pathlib import Path
 
 from backend.models.auth_user import AuthUser
 
-DATA_FILE = "data/users.json"
+DATA_FILE = Path("data/users.json")
 
 
 def load_users():
-    if not os.path.exists(DATA_FILE):
+    if not DATA_FILE.exists() or DATA_FILE.stat().st_size == 0:
         return []
     try:
         with open(DATA_FILE, "r") as f:
@@ -19,6 +20,6 @@ def load_users():
 
 
 def save_users(users):
-    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(DATA_FILE, "w") as f:
         json.dump([asdict(u) for u in users], f, indent=2)

@@ -12,12 +12,18 @@ Once installed, Pre-commit will automatically run the defined checks and formatt
 
 This project uses Docker Compose to build and run the app. Make sure you have Docker Engine installed and running on your machine.
 
+### Env mode
+
+You can launch the app in dev mode or prod mode. The dev mode is for developpers to implement new features and test their code, it will show the changes in the code instantly and will write the data in the developper local folder.
+The prod mode is for users.
+In the following setup instructions, replace env by either dev or prod, based on your utilisation of the app.
+
 ### First time setup
 
 To build the images and start the app for the first time:
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.{env}.yaml up --build
 ```
 
 This will:
@@ -30,7 +36,7 @@ This will:
 Once the images have been built, you can start the app with:
 
 ```bash
-docker compose up
+docker compose -f docker-compose.{env}.yaml up
 ```
 
 ### Accessing the app
@@ -42,5 +48,5 @@ The app is running at http://localhost:5173
 To stop and remove all running containers:
 
 ```bash
-docker compose down
+docker compose -f docker-compose.{env}.yaml down
 ```

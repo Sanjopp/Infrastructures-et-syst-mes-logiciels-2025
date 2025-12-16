@@ -2,19 +2,20 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-    container_name: tricount-backend
+      dockerfile: backend/Dockerfile.dev
+    container_name: tricount-backend-dev
     ports:
       - "5001:5000"
     restart: always
     volumes:
+      - ./backend:/app/backend
       - ./data:/app/data
 
   frontend:
       build:
         context: ./frontend
         dockerfile: Dockerfile.dev
-      container_name: tricount-frontend
+      container_name: tricount-frontend-dev
       ports:
         - "5173:5173"
       volumes:
