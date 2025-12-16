@@ -31,6 +31,7 @@ def tricount_to_dict(tricount: Tricount) -> dict:
                 "currency": e.currency.value,
                 "payer_id": e.payer_id,
                 "participants_ids": e.participants_ids,
+                "weights": e.weights,
             }
             for e in tricount.expenses
         ],
@@ -61,6 +62,7 @@ def tricount_from_dict(data: dict) -> Tricount:
             currency=Currency(e["currency"]),
             payer_id=e["payer_id"],
             participants_ids=e["participants_ids"],
+            weights=e.get("weights", {}),
         )
         tricount.expenses.append(expense)
 

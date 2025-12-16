@@ -13,6 +13,7 @@ class Expense:
 
     payer_id: str = ""
     participants_ids: list[str] = field(default_factory=list)
+    weights: dict[str, float] = field(default_factory=dict)
 
     def split_amount(self) -> float:
         if not self.participants_ids:

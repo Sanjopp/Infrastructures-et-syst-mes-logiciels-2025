@@ -3,11 +3,10 @@ from flask import Blueprint, jsonify, request, send_file
 from backend.models.currency import Currency
 from backend.models.tricount import Tricount
 from backend.services.balance import compute_balances
+from backend.services.export import export_tricount_to_excel
 from backend.services.settlement import compute_settlements
 from backend.utils.auth_storage import load_users
 from backend.utils.tricount_storage import load_tricounts, save_tricounts
-from backend.services.export import export_tricount_to_excel
-
 
 tricount_bp = Blueprint("tricounts", __name__)
 
@@ -40,6 +39,7 @@ def tricount_with_balances_to_dict(tricount: Tricount) -> dict:
                 "currency": e.currency.value,
                 "payer_id": e.payer_id,
                 "participants_ids": e.participants_ids,
+                "weights": e.weights,
             }
             for e in tricount.expenses
         ],
@@ -162,6 +162,8 @@ def add_expense(tricount_id: str):
     payer_id = payload.get("payer_id")
     participants_ids = payload.get("participants_ids") or []
 
+    weights = payload.get("weights") or {}
+
     if not description:
         return jsonify({"error": "Description is required"}), 400
 
@@ -175,7 +177,8 @@ def add_expense(tricount_id: str):
     if not participants_ids:
         return jsonify({"error": "At least one participant is required"}), 400
 
-    t.add_expense(description, amount, payer_id, participants_ids)
+    t.add_expense(description, amount, payer_id, participants_ids, weights)
+
     save_tricounts(tricounts)
 
     return jsonify(tricount_with_balances_to_dict(t)), 201
@@ -200,7 +203,9 @@ def export_tricount_excel(tricount_id: str):
         return jsonify({"error": "Not found"}), 404
 
     output = export_tricount_to_excel(tricount)
-    filename = f"tricount_{(tricount.name or tricount.id).replace(' ', '_')}.xlsx"
+    filename = (
+        f"tricount_{(tricount.name or tricount.id).replace(' ', '_')}.xlsx"
+    )
 
     return send_file(
         output,

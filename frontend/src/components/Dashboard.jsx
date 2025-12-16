@@ -22,6 +22,10 @@ export default function Dashboard({ user, onLogout }) {
   const [payerId, setPayerId] = useState("");
   const [participants, setParticipants] = useState([]);
 
+  const [splitMode, setSplitMode] = useState("equal");
+  const [weights, setWeights] = useState({});
+  const [expandedExpenseId, setExpandedExpenseId] = useState(null);
+
   useEffect(() => {
     loadTricounts();
   }, []);
@@ -141,42 +145,55 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function handleAddExpense(e) {
-    e.preventDefault();
-    if (!selectedTricount) return;
+      e.preventDefault();
+      if (!selectedTricount) return;
 
-    if (!desc.trim() || !amount || !payerId || participants.length === 0) {
-      setError("Merci de remplir tous les champs de la dépense.");
-      return;
-    }
-
-    try {
-      setError("");
-      const res = await fetch(
-        `${API_BASE}/tricounts/${selectedTricount.id}/expenses`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            description: desc.trim(),
-            amount: parseFloat(amount),
-            payer_id: payerId,
-            participants_ids: participants,
-          }),
-        }
-      );
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur ajout dépense.");
+      if (!desc.trim() || !amount || !payerId || participants.length === 0) {
+        setError("Merci de remplir tous les champs (et au moins un participant).");
+        return;
       }
 
-      await loadTricountDetail(selectedTricount.id);
-      await loadTricounts();
-    } catch (e) {
-      console.error(e);
-      setError(e.message || "Erreur réseau lors de l'ajout dépense.");
+      const payload = {
+        description: desc.trim(),
+        amount: parseFloat(amount),
+        payer_id: payerId,
+        participants_ids: participants,
+        weights: {},
+      };
+
+      if (splitMode === "weighted") {
+        const weightMap = {};
+        participants.forEach((uid) => {
+          weightMap[uid] = parseFloat(weights[uid]) || 0;
+        });
+        payload.weights = weightMap;
+      }
+
+      try {
+        setError("");
+        const res = await fetch(
+          `${API_BASE}/tricounts/${selectedTricount.id}/expenses`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Erreur ajout dépense.");
+        }
+
+        await loadTricountDetail(selectedTricount.id);
+        await loadTricounts();
+
+        setDesc(""); setAmount("");
+      } catch (e) {
+        console.error(e);
+        setError(e.message || "Erreur réseau lors de l'ajout dépense.");
+      }
     }
-  }
 
   async function handleDeleteUser(userId) {
     if (!selectedId) return;
@@ -287,7 +304,7 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
-  
+
   const balances = selectedTricount?.balances || {};
   const settlements = selectedTricount?.settlements || [];
 
@@ -438,19 +455,73 @@ export default function Dashboard({ user, onLogout }) {
                      <h3 className="text-sm font-semibold">Dépenses</h3>
                      <span className="text-[10px] text-slate-400">{selectedTricount.expenses.length}</span>
                   </div>
+
                   <div className="space-y-2 max-h-52 overflow-y-auto">
-                     {selectedTricount.expenses.map(e => {
-                        const payer = selectedTricount.users.find(u => u.id === e.payer_id);
-                        return (
-                           <div key={e.id} className="bg-slate-50 p-2 rounded text-xs flex justify-between dark:bg-slate-800/70">
-                              <div>
-                                 <div className="font-medium">{e.description}</div>
-                                 <div className="text-[10px] text-slate-500">{e.amount} {e.currency} par {payer?.name}</div>
+                    {selectedTricount.expenses.map((e) => {
+                      const payer = selectedTricount.users.find((u) => u.id === e.payer_id);
+                      const isExpanded = expandedExpenseId === e.id;
+
+                      return (
+                        <div
+                          key={e.id}
+                          className={`p-2 rounded text-xs flex flex-col transition-colors cursor-pointer ${
+                            isExpanded
+                              ? "bg-emerald-50 border border-emerald-100 dark:bg-emerald-900/20"
+                              : "bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/70"
+                          }`}
+                          onClick={() => setExpandedExpenseId(isExpanded ? null : e.id)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                {e.description}
                               </div>
-                              <button onClick={() => handleDeleteExpense(e.id)} className="text-red-400 hover:text-red-600">×</button>
-                           </div>
-                        )
-                     })}
+                              <div className="text-[10px] text-slate-500">
+                                {Number(e.amount).toFixed(2)} {e.currency} • Payé par{" "}
+                                <span className="font-semibold">{payer?.name || "?"}</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                handleDeleteExpense(e.id);
+                              }}
+                              className="text-slate-400 hover:text-red-500 px-2"
+                            >
+                              ×
+                            </button>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700">
+                              <span className="block mb-1 font-semibold text-[10px] text-slate-600 dark:text-slate-400">
+                                Concernant :
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {e.participants_ids.map((pid) => {
+                                  const pName = selectedTricount.users.find((u) => u.id === pid)?.name;
+                                  const weight = e.weights && e.weights[pid];
+
+                                  return (
+                                    <span
+                                      key={pid}
+                                      className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px] text-slate-600 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"
+                                    >
+                                      {pName}
+                                      {weight ? (
+                                        <span className="ml-1 text-emerald-500 font-mono">
+                                          (x{weight})
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <form onSubmit={handleAddExpense} className="space-y-2 border-t pt-2 border-slate-100 dark:border-slate-700 text-xs">
@@ -464,17 +535,81 @@ export default function Dashboard({ user, onLogout }) {
                            {selectedTricount.users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                         </select>
                      </div>
-                     <div>
-                        <span className="block mb-1">Pour qui :</span>
-                        <div className="flex flex-wrap gap-2">
-                           {selectedTricount.users.map(u => (
-                              <label key={u.id} className="flex items-center gap-1 cursor-pointer bg-slate-100 px-2 py-1 rounded dark:bg-slate-800">
-                                 <input type="checkbox" checked={participants.includes(u.id)} onChange={() => toggleParticipant(u.id)} />
-                                 {u.name}
-                              </label>
-                           ))}
-                        </div>
-                     </div>
+                     <div className="mt-2">
+                      <div className="flex justify-between items-end mb-1">
+                        <span className="block mb-1 font-semibold">Pour qui :</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (participants.length === selectedTricount.users.length) {
+                              setParticipants([]);
+                            } else {
+                              setParticipants(selectedTricount.users.map((u) => u.id));
+                            }
+                          }}
+                          className="text-[10px] text-emerald-500 hover:underline mb-1"
+                        >
+                          {participants.length === selectedTricount.users.length
+                            ? "Aucun"
+                            : "Tous"}
+                        </button>
+                      </div>
+
+                      <div className="flex gap-4 mb-2 text-xs">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="mode"
+                            checked={splitMode === "equal"}
+                            onChange={() => setSplitMode("equal")}
+                          />
+                          Équitable
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="mode"
+                            checked={splitMode === "weighted"}
+                            onChange={() => setSplitMode("weighted")}
+                          />
+                          Pondéré
+                        </label>
+                      </div>
+
+                      <div className="flex flex-col gap-1 max-h-40 overflow-y-auto border border-slate-100 p-1 rounded dark:border-slate-800">
+                        {selectedTricount.users.map((u) => (
+                          <div
+                            key={u.id}
+                            className="flex items-center justify-between bg-slate-50 p-1.5 rounded dark:bg-slate-800"
+                          >
+                            <label className="flex items-center gap-2 cursor-pointer text-xs flex-1">
+                              <input
+                                type="checkbox"
+                                checked={participants.includes(u.id)}
+                                onChange={() => toggleParticipant(u.id)}
+                              />
+                              {u.name}
+                            </label>
+
+                            {splitMode === "weighted" && participants.includes(u.id) && (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  placeholder="1"
+                                  className="w-12 text-right text-xs border rounded p-1 outline-none focus:border-emerald-500 dark:bg-slate-900 dark:border-slate-700"
+                                  value={weights[u.id] || ""}
+                                  onChange={(e) =>
+                                    setWeights({ ...weights, [u.id]: e.target.value })
+                                  }
+                                />
+                                <span className="text-[10px] text-slate-400">pd</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                      <button type="submit" className="w-full bg-emerald-500 text-white py-1 rounded">Ajouter dépense</button>
                   </form>
                </section>
