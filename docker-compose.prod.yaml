@@ -13,17 +13,13 @@ services:
   frontend:
       build:
         context: ./frontend
-        dockerfile: Dockerfile.dev
+        dockerfile: Dockerfile.prod
       container_name: tricount-frontend
       ports:
-        - "5173:5173"
-      volumes:
-        - ./frontend:/app
-        - /app/node_modules
+        - "5173:80"
       depends_on:
         - backend
       restart: always
-      command: npm run dev
 
 volumes:
   data:
