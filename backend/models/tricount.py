@@ -26,16 +26,21 @@ class Tricount:
         amount: float,
         payer_id: str,
         participants_ids: list[str],
+        weights: dict = None,
     ) -> Expense:
+        if weights is None:
+            weights = {}
+
         expense = Expense(
+            id=str(uuid4()),
             description=description,
             amount=amount,
+            currency=self.currency,
             payer_id=payer_id,
             participants_ids=participants_ids,
-            currency=self.currency,
+            weights=weights,
         )
         self.expenses.append(expense)
-        return expense
 
     def get_user(self, user_id: str) -> User | None:
         return next((u for u in self.users if u.id == user_id), None)
