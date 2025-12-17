@@ -16,21 +16,22 @@ def register():
     name = data.get("name")
 
     if not email or not password or not name:
-        return jsonify({"error": "Missing email, password, or name"}), 400
+        return jsonify({"error": "Email, mot de passe ou Nom manquant"}), 400
 
-    users = load_users()
-    if any(u.email == email for u in users):
-        return jsonify({"error": "Email already exists"}), 409
+    auth_users = load_users()
+    if any(u.email == email for u in auth_users):
+        return jsonify({"error": "Cet email est déjà utilisé"}), 409
 
-    # Hash password
     hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
 
-    new_user = AuthUser(email=email, password_hash=hashed_pw, name=name)
-    users.append(new_user)
-    save_users(users)
+    new_auth_user = AuthUser(email=email, password_hash=hashed_pw, name=name)
+    auth_users.append(new_auth_user)
+    save_users(auth_users)
 
     return (
-        jsonify({"message": "User created successfully", "id": new_user.id}),
+        jsonify(
+            {"message": "Utilisateur créé avec succès", "id": new_auth_user.id}
+        ),
         201,
     )
 
@@ -42,23 +43,25 @@ def login():
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"error": "Missing email or password"}), 400
+        return jsonify({"error": "Email ou mot de passe manquant"}), 400
 
-    users = load_users()
+    auth_users = load_users()
 
-    user = next((u for u in users if u.email == email), None)
+    auth_user = next((u for u in auth_users if u.email == email), None)
 
-    if user and bcrypt.check_password_hash(user.password_hash, password):
-        access_token = create_access_token(identity=user.id)
+    if auth_user and bcrypt.check_password_hash(
+        auth_user.password_hash, password
+    ):
+        access_token = create_access_token(identity=auth_user.id)
 
         return (
             jsonify(
                 {
                     "access_token": access_token,
-                    "user": {
-                        "id": user.id,
-                        "name": user.name,
-                        "email": user.email,
+                    "auth_user": {
+                        "id": auth_user.id,
+                        "name": auth_user.name,
+                        "email": auth_user.email,
                     },
                 }
             ),
