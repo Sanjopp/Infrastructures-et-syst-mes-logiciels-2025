@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, send_file
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from backend.models.currency import Currency
 from backend.models.tricount import Tricount
@@ -52,7 +53,9 @@ def tricount_with_balances_to_dict(tricount: Tricount) -> dict:
 
 
 @tricount_bp.route("", methods=["GET"])
+@jwt_required()
 def list_tricounts():
+    user_auth_id = get_jwt_identity()
     return jsonify(
         [
             {
@@ -63,19 +66,25 @@ def list_tricounts():
                 "expenses_count": len(t.expenses),
             }
             for t in tricounts
+            if (
+                any(u.auth_id == user_auth_id for u in t.users)
+                or t.owner_auth_id == user_auth_id
+            )
         ]
     )
 
 
 @tricount_bp.route("", methods=["POST"])
+@jwt_required()
 def create_tricount():
+    user_auth_id = get_jwt_identity()
     payload = request.get_json() or {}
     name = (payload.get("name") or "").strip()
 
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
-    t = Tricount(name=name, currency=Currency.EUR)
+    t = Tricount(name=name, owner_auth_id=user_auth_id, currency=Currency.EUR)
     tricounts.append(t)
     save_tricounts(tricounts)
 
@@ -214,17 +223,16 @@ def export_tricount_excel(tricount_id: str):
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
+
 @tricount_bp.route("/<tricount_id>", methods=["DELETE"])
 def delete_tricount(tricount_id: str):
-   
+
     tricount = find_tricount(tricount_id)
     if tricount is None:
         return jsonify({"error": "Tricount introuvable"}), 404
 
-    
     tricounts[:] = [t for t in tricounts if t.id != tricount_id]
 
     save_tricounts(tricounts)
-
 
     return "", 204

@@ -9,6 +9,7 @@ from .user import User
 @dataclass
 class Tricount:
     id: str = field(default_factory=lambda: str(uuid4()))
+    owner_auth_id: str = ""
     name: str = ""
     currency: Currency = Currency.EUR
 
