@@ -121,7 +121,7 @@ export default function Dashboard({ user, onLogout }) {
     if (splitMode === "weighted") {
         const weightMap = {};
         participants.forEach((uid) => {
-          weightMap[uid] = parseFloat(weights[uid]) || 0;
+          weightMap[uid] = Math.max(1, parseFloat(weights[uid] ?? 1));
         });
         payload.weights = weightMap;
       }
@@ -267,10 +267,25 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   function toggleParticipant(id) {
-    setParticipants((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setParticipants((prev) => {
+      const isSelected = prev.includes(id);
+
+      if (isSelected) {
+        setWeights((w) => {
+          const { [id]: _, ...rest } = w;
+          return rest;
+        });
+        return prev.filter((x) => x !== id);
+      } else {
+        setWeights((w) => ({
+          ...w,
+          [id]: 1,
+        }));
+        return [...prev, id];
+      }
+    });
   }
+
 
   const balances = selectedTricount?.balances || {};
   const settlements = selectedTricount?.settlements || [];
@@ -674,9 +689,9 @@ export default function Dashboard({ user, onLogout }) {
                                   type="number"
                                   placeholder="1"
                                   className="w-12 text-right text-xs border rounded p-1 outline-none focus:border-emerald-500 dark:bg-slate-900 dark:border-slate-700"
-                                  value={weights[u.id] || ""}
+                                  value={weights[u.id] ?? 1}
                                   onChange={(e) =>
-                                    setWeights({ ...weights, [u.id]: e.target.value })
+                                    setWeights({ ...weights, [u.id]: Number(e.target.value) })
                                   }
                                 />
                                 <span className="text-[10px] text-slate-400">pd</span>
