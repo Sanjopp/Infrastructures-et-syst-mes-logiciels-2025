@@ -214,6 +214,15 @@ export default function Dashboard({ user, onLogout }) {
     try {
       const users = await getUsers(joinTricountId);
 
+      const alreadyJoined = users.some(
+        (u) => u.auth_id && u.auth_id === user?.id
+      );
+
+      if (alreadyJoined) {
+        setError("Vous avez déjà rejoint ce tricount.");
+        return;
+      }
+
       setJoinUsers(users);
       setJoinStep("loaded");
     } catch (e) {
