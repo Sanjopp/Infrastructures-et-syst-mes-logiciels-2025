@@ -12,6 +12,12 @@ Once installed, Pre-commit will automatically run the defined checks and formatt
 
 This project uses Docker Compose to build and run the app. Make sure you have Docker Engine installed and running on your machine.
 
+### .env file
+You need a .env file looking like
+```
+JWT_SECRET_KEY=xxx
+```
+
 ### Env mode
 
 You can launch the app in dev mode or prod mode. The dev mode is for developpers to implement new features and test their code, it will show the changes in the code instantly and will write the data in the developper local folder.
