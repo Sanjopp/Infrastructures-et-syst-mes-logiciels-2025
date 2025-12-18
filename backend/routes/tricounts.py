@@ -277,7 +277,7 @@ def join_tricount(tricount_id: str, user_id: str):
     user_auth_id = get_jwt_identity()
     t = get_tricount_from_id(tricount_id)
 
-    if any(u.auth_id == user_auth_id for u in t.users):
+    if any(u.auth_id == user_auth_id and user_id != u.id for u in t.users):
         return jsonify({"error": "You have already joined this tricount"}), 404
 
     user = t.modify_user_auth_id(user_id=user_id, auth_id=user_auth_id)

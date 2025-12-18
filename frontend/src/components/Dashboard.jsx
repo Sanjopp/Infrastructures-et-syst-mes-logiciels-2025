@@ -79,7 +79,8 @@ export default function Dashboard({ user, onLogout }) {
       await loadTricounts();
       await loadTricountDetail(created.id);
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la création du tricount.");
     }
   }
 
@@ -95,7 +96,8 @@ export default function Dashboard({ user, onLogout }) {
       await loadTricountDetail(selectedTricount.id);
       await loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de l'ajout de l'utilisateur.");
     }
   }
 
@@ -134,7 +136,8 @@ export default function Dashboard({ user, onLogout }) {
       await loadTricountDetail(selectedTricount.id);
       await loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de l'ajout de la dépense.");
     }
   }
 
@@ -145,7 +148,8 @@ export default function Dashboard({ user, onLogout }) {
       setSelectedTricount(data);
       loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la suppression de l'utilisateur.");
     }
   }
 
@@ -156,7 +160,8 @@ export default function Dashboard({ user, onLogout }) {
       setSelectedTricount(data);
       loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la suppression de la dépense.");
     }
   }
 
@@ -168,7 +173,8 @@ export default function Dashboard({ user, onLogout }) {
       setSelectedId(null);
       loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la suppression du tricount.");
     }
   }
 
@@ -182,6 +188,7 @@ export default function Dashboard({ user, onLogout }) {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (e) {
+      console.error(e);
       setError("Erreur export Excel.");
     }
   }
@@ -195,7 +202,8 @@ export default function Dashboard({ user, onLogout }) {
         data.tricount_id
       );
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de l'invitation au tricount.");
     }
   }
 
@@ -209,7 +217,8 @@ export default function Dashboard({ user, onLogout }) {
       setJoinUsers(users);
       setJoinStep("loaded");
     } catch (e) {
-      setError(e.message || "Tricount introuvable");
+      console.error(e);
+      setError("Tricount introuvable");
     }
   }
 
@@ -226,6 +235,8 @@ export default function Dashboard({ user, onLogout }) {
           name: joinNewUserName,
           email: joinNewUserEmail || null,
         });
+        setJoinNewUserName("");
+        setJoinNewUserEmail("");
 
         const users = await getUsers(joinTricountId);
         const created = users.find(
@@ -250,7 +261,8 @@ export default function Dashboard({ user, onLogout }) {
 
       await loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de l'ajout au tricount.");
     }
   }
 
