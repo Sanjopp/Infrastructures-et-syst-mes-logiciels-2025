@@ -45,3 +45,10 @@ class Tricount:
 
     def get_user(self, user_id: str) -> User | None:
         return next((u for u in self.users if u.id == user_id), None)
+
+    def modify_user_auth_id(self, user_id: str, auth_id: str) -> User | None:
+        user = self.get_user(user_id)
+        if user:
+            user.auth_id = auth_id
+            return user
+        return None
