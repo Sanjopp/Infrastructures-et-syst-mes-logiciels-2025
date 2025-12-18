@@ -6,7 +6,6 @@ from backend.models.tricount import Tricount
 from backend.services.balance import compute_balances
 from backend.services.export import export_tricount_to_excel
 from backend.services.settlement import compute_settlements
-from backend.utils.auth_storage import load_users
 from backend.utils.tricount_storage import load_tricounts, save_tricounts
 
 tricount_bp = Blueprint("tricounts", __name__)
@@ -14,14 +13,20 @@ tricount_bp = Blueprint("tricounts", __name__)
 tricounts = load_tricounts()
 
 
+def get_tricount_from_id(tricount_id: str) -> Tricount:
+    t = next((t for t in tricounts if t.id == tricount_id), None)
+    if not t:
+        abort(404, "Not found")
+
+    return t
+
+
 def get_authorized_tricount(
     tricount_id: str, owner_level: bool = False
 ) -> Tricount:
     user_auth_id = get_jwt_identity()
 
-    t = next((t for t in tricounts if t.id == tricount_id), None)
-    if not t:
-        abort(404, "Not found")
+    t = get_tricount_from_id(tricount_id)
 
     if not (
         t.owner_auth_id == user_auth_id
@@ -43,7 +48,12 @@ def tricount_with_balances_to_dict(tricount: Tricount) -> dict:
         "name": tricount.name,
         "currency": tricount.currency.value,
         "users": [
-            {"id": u.id, "name": u.name, "email": u.email}
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "auth_id": u.auth_id,
+            }
             for u in tricount.users
         ],
         "expenses": [
@@ -115,7 +125,7 @@ def get_tricount(tricount_id: str):
 @tricount_bp.route("/<tricount_id>/users", methods=["POST"])
 @jwt_required()
 def add_user(tricount_id: str):
-    t = get_authorized_tricount(tricount_id)
+    t = get_tricount_from_id(tricount_id)
     user_auth_id = get_jwt_identity()
 
     payload = request.get_json() or {}
@@ -145,7 +155,7 @@ def add_user(tricount_id: str):
 @tricount_bp.route("/<tricount_id>/users/<user_id>", methods=["DELETE"])
 @jwt_required()
 def delete_user(tricount_id: str, user_id: str):
-    t = get_authorized_tricount(tricount_id)
+    t = get_authorized_tricount(tricount_id, owner_level=True)
 
     for e in t.expenses:
         if e.payer_id == user_id or user_id in e.participants_ids:
@@ -225,7 +235,7 @@ def export_tricount_excel(tricount_id: str):
 @tricount_bp.route("/<tricount_id>", methods=["DELETE"])
 @jwt_required()
 def delete_tricount(tricount_id: str):
-    if not get_authorized_tricount(tricount_id):
+    if not get_authorized_tricount(tricount_id, owner_level=True):
         return (
             jsonify(
                 {"error": "You are not authorized to delete this tricount"}
@@ -237,3 +247,56 @@ def delete_tricount(tricount_id: str):
     save_tricounts(tricounts)
 
     return "", 204
+
+
+@tricount_bp.route("/<tricount_id>/invite", methods=["GET"])
+@jwt_required()
+def invite_new_user(tricount_id: str):
+    t = get_authorized_tricount(tricount_id, owner_level=True)
+    return jsonify({"tricount_id": t.id})
+
+
+@tricount_bp.route("/<tricount_id>/users", methods=["GET"])
+@jwt_required()
+def get_users(tricount_id: str):
+    t = get_tricount_from_id(tricount_id)
+    return (
+        jsonify(
+            [
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "auth_id": user.auth_id,
+                }
+                for user in t.users
+            ]
+        ),
+        200,
+    )
+
+
+@tricount_bp.route("/<tricount_id>/join/<user_id>", methods=["POST"])
+@jwt_required()
+def join_tricount(tricount_id: str, user_id: str):
+    user_auth_id = get_jwt_identity()
+    t = get_tricount_from_id(tricount_id)
+
+    if any(u.auth_id == user_auth_id and user_id != u.id for u in t.users):
+        return jsonify({"error": "You have already joined this tricount"}), 404
+
+    user = t.modify_user_auth_id(user_id=user_id, auth_id=user_auth_id)
+
+    save_tricounts(tricounts)
+
+    return (
+        jsonify(
+            {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "auth_id": user.auth_id,
+            }
+        ),
+        201,
+    )

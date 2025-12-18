@@ -7,11 +7,11 @@ function getAuthHeaders() {
     : {};
 }
 
-async function handleResponse(res) {
+async function handleResponse(res, messageOnError = "Une erreur est survenue") {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || `HTTP ${res.status}`);
+    throw new Error(data.error || messageOnError);
   }
 
   return data;
@@ -24,7 +24,7 @@ export async function login(email, password) {
     body: JSON.stringify({ email, password }),
   });
 
-  const data = await handleResponse(res);
+  const data = await handleResponse(res, "Échec de la connexion");
 
   localStorage.setItem("access_token", data.access_token);
 
@@ -48,7 +48,7 @@ export async function register({ name, email, password }) {
     }),
   });
 
-  return handleResponse(res);
+  return handleResponse(res, "Échec de l'inscription");
 }
 
 export async function fetchTricounts() {
@@ -66,7 +66,7 @@ export async function fetchTricountDetail(id) {
       ...getAuthHeaders(),
     },
   });
-  return handleResponse(res);
+  return handleResponse(res, "Échec de la récupération des détails du tricount");
 }
 
 export async function createTricount(name) {
@@ -78,7 +78,7 @@ export async function createTricount(name) {
     },
     body: JSON.stringify({ name }),
   });
-  return handleResponse(res);
+  return handleResponse(res, "Échec de la création du tricount");
 }
 
 export async function deleteTricount(id) {
@@ -88,7 +88,7 @@ export async function deleteTricount(id) {
       ...getAuthHeaders(),
     },
   });
-  return handleResponse(res);
+  return handleResponse(res, "Échec de la suppression du tricount");
 }
 
 export async function addUser(tricountId, payload) {
@@ -100,7 +100,7 @@ export async function addUser(tricountId, payload) {
     },
     body: JSON.stringify(payload),
   });
-  return handleResponse(res);
+  return handleResponse(res, "Impossible d'ajouter l'utilisateur");
 }
 
 export async function deleteUser(tricountId, userId) {
@@ -113,7 +113,7 @@ export async function deleteUser(tricountId, userId) {
       },
     }
   );
-  return handleResponse(res);
+  return handleResponse(res, "Impossible de supprimer l'utilisateur");
 }
 
 export async function addExpense(tricountId, payload) {
@@ -125,7 +125,8 @@ export async function addExpense(tricountId, payload) {
     },
     body: JSON.stringify(payload),
   });
-  return handleResponse(res);
+
+  return handleResponse(res, "Impossible d'ajouter la dépense");
 }
 
 export async function deleteExpense(tricountId, expenseId) {
@@ -138,7 +139,8 @@ export async function deleteExpense(tricountId, expenseId) {
       },
     }
   );
-  return handleResponse(res);
+
+  return handleResponse(res, "Impossible de supprimer la dépense");
 }
 
 export async function exportExcel(tricountId) {
@@ -151,9 +153,48 @@ export async function exportExcel(tricountId) {
     }
   );
 
-  if (!res.ok) {
-    throw new Error("Export failed");
-  }
+  return handleResponse(res, "Export impossible");
+}
 
-  return res.blob();
+export async function inviteTricount(tricountId) {
+  const res = await fetch(
+    `${API_BASE}/tricounts/${tricountId}/invite`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  return handleResponse(res, "Invitation impossible");
+}
+
+export async function getUsers(tricountId) {
+  const res = await fetch(
+    `${API_BASE}/tricounts/${tricountId}/users`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  return handleResponse(res, "Impossible de récupérer les utilisateurs");
+}
+
+export async function joinTricount(tricountId, userId) {
+  const res = await fetch(
+    `${API_BASE}/tricounts/${tricountId}/join/${userId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  return handleResponse(res, "Impossible de rejoindre le tricount");
 }

@@ -9,6 +9,9 @@ import {
   deleteExpense,
   deleteTricount,
   exportExcel,
+  inviteTricount,
+  getUsers,
+  joinTricount,
 } from "../api";
 
 export default function Dashboard({ user, onLogout }) {
@@ -28,6 +31,12 @@ export default function Dashboard({ user, onLogout }) {
   const [splitMode, setSplitMode] = useState("equal");
   const [weights, setWeights] = useState({});
   const [expandedExpenseId, setExpandedExpenseId] = useState(null);
+  const [joinStep, setJoinStep] = useState("idle");
+  const [joinTricountId, setJoinTricountId] = useState("");
+  const [joinUsers, setJoinUsers] = useState([]);
+  const [joinExistingUserId, setJoinExistingUserId] = useState(null);
+  const [joinNewUserName, setJoinNewUserName] = useState("");
+  const [joinNewUserEmail, setJoinNewUserEmail] = useState("");
 
   useEffect(() => {
     loadTricounts();
@@ -70,7 +79,8 @@ export default function Dashboard({ user, onLogout }) {
       await loadTricounts();
       await loadTricountDetail(created.id);
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la création du tricount.");
     }
   }
 
@@ -86,7 +96,8 @@ export default function Dashboard({ user, onLogout }) {
       await loadTricountDetail(selectedTricount.id);
       await loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de l'ajout de l'utilisateur.");
     }
   }
 
@@ -110,7 +121,7 @@ export default function Dashboard({ user, onLogout }) {
     if (splitMode === "weighted") {
         const weightMap = {};
         participants.forEach((uid) => {
-          weightMap[uid] = parseFloat(weights[uid]) || 0;
+          weightMap[uid] = Math.max(1, parseFloat(weights[uid] ?? 1));
         });
         payload.weights = weightMap;
       }
@@ -125,7 +136,8 @@ export default function Dashboard({ user, onLogout }) {
       await loadTricountDetail(selectedTricount.id);
       await loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de l'ajout de la dépense.");
     }
   }
 
@@ -136,7 +148,8 @@ export default function Dashboard({ user, onLogout }) {
       setSelectedTricount(data);
       loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la suppression de l'utilisateur.");
     }
   }
 
@@ -147,7 +160,8 @@ export default function Dashboard({ user, onLogout }) {
       setSelectedTricount(data);
       loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la suppression de la dépense.");
     }
   }
 
@@ -159,7 +173,8 @@ export default function Dashboard({ user, onLogout }) {
       setSelectedId(null);
       loadTricounts();
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setError("Erreur lors de la suppression du tricount.");
     }
   }
 
@@ -173,15 +188,104 @@ export default function Dashboard({ user, onLogout }) {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (e) {
+      console.error(e);
       setError("Erreur export Excel.");
     }
   }
 
-  function toggleParticipant(id) {
-    setParticipants((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  async function handleInvite() {
+    try {
+      const data = await inviteTricount(selectedTricount.id);
+
+      window.prompt(
+        "Partager cet identifiant pour rejoindre le tricount :",
+        data.tricount_id
+      );
+    } catch (e) {
+      console.error(e);
+      setError("Erreur lors de l'invitation au tricount.");
+    }
   }
+
+  async function handleLoadJoinTricount(e) {
+    e.preventDefault();
+    setError("");
+
+    try {
+      const users = await getUsers(joinTricountId);
+
+      setJoinUsers(users);
+      setJoinStep("loaded");
+    } catch (e) {
+      console.error(e);
+      setError("Tricount introuvable");
+    }
+  }
+
+  async function handleConfirmJoin() {
+    try {
+      let userId = joinExistingUserId;
+
+      if (!userId) {
+        if (!joinNewUserName.trim()) {
+          throw new Error("Nom requis");
+        }
+
+        await addUser(joinTricountId, {
+          name: joinNewUserName,
+          email: joinNewUserEmail || null,
+        });
+        setJoinNewUserName("");
+        setJoinNewUserEmail("");
+
+        const users = await getUsers(joinTricountId);
+        const created = users.find(
+          (u) => u.name === joinNewUserName
+        );
+
+        if (!created) {
+          throw new Error("Utilisateur non créé");
+        }
+
+        userId = created.id;
+      }
+
+      await joinTricount(joinTricountId, userId);
+
+      setJoinStep("idle");
+      setJoinTricountId("");
+      setJoinUsers([]);
+      setJoinExistingUserId("");
+      setJoinNewUserName("");
+      setJoinNewUserEmail("");
+
+      await loadTricounts();
+    } catch (e) {
+      console.error(e);
+      setError("Erreur lors de l'ajout au tricount.");
+    }
+  }
+
+  function toggleParticipant(id) {
+    setParticipants((prev) => {
+      const isSelected = prev.includes(id);
+
+      if (isSelected) {
+        setWeights((w) => {
+          const { [id]: _, ...rest } = w;
+          return rest;
+        });
+        return prev.filter((x) => x !== id);
+      } else {
+        setWeights((w) => ({
+          ...w,
+          [id]: 1,
+        }));
+        return [...prev, id];
+      }
+    });
+  }
+
 
   const balances = selectedTricount?.balances || {};
   const settlements = selectedTricount?.settlements || [];
@@ -250,24 +354,124 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
-          <h3 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-300">Nouveau tricount</h3>
-          <form onSubmit={handleCreateTricount} className="space-y-2">
-            <input
-              type="text"
-              placeholder="Ex : Voyage..."
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-900 dark:border-slate-700"
-            />
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition"
-            >
-              Créer
-            </button>
-          </form>
+        <div className="border-t border-slate-200 pt-3 space-y-4 dark:border-slate-800">
+          <div>
+            <h3 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-300">
+              Nouveau tricount
+            </h3>
+            <form onSubmit={handleCreateTricount} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Ex : Voyage..."
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-900 dark:border-slate-700"
+              />
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition"
+              >
+                Créer
+              </button>
+            </form>
+          </div>
         </div>
+
+        <div className="border-t border-slate-200 pt-3 space-y-4 dark:border-slate-800">
+          <div>
+            <h3 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-300">
+              Rejoindre un tricount existant
+            </h3>
+
+            {joinStep === "idle" && (
+              <form
+                onSubmit={handleLoadJoinTricount}
+                className="space-y-2"
+              >
+                <input
+                  type="text"
+                  placeholder="ID du tricount"
+                  value={joinTricountId}
+                  onChange={(e) => setJoinTricountId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-900 dark:border-slate-700"
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition"
+                >
+                  Rejoindre
+                  </button>
+              </form>
+            )}
+
+            {joinStep === "loaded" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Utilisateur existant</label>
+                  <select
+                    value={joinExistingUserId}
+                    onChange={(e) => setJoinExistingUserId(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
+                  >
+                    <option value="">— Sélectionner —</option>
+                    {joinUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="text-center text-[10px] text-slate-400">ou</div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Créer un nouvel utilisateur</label>
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    value={joinNewUserName}
+                    onChange={(e) => setJoinNewUserName(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email (optionnel)"
+                    value={joinNewUserEmail}
+                    onChange={(e) => setJoinNewUserEmail(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setJoinStep("idle");
+                      setJoinTricountId("");
+                      setJoinUsers([]);
+                      setJoinExistingUserId("");
+                      setJoinNewUserName("");
+                      setJoinNewUserEmail("");
+                    }}
+                    className="flex-1 bg-slate-200 text-slate-700 text-xs py-1.5 rounded hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    Annuler
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmJoin}
+                    className="flex-1 bg-emerald-500 text-white text-xs py-1.5 rounded hover:bg-emerald-600 transition"
+                    disabled={!joinExistingUserId && !joinNewUserName}
+                  >
+                    Rejoindre
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
       </aside>
 
       <main className="flex-1 flex flex-col gap-4">
@@ -287,6 +491,12 @@ export default function Dashboard({ user, onLogout }) {
               </div>
               <div className="flex gap-2">
 
+                <button
+                  onClick={handleInvite}
+                  className="text-xs bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800"
+                >
+                  Inviter un utilisateur
+                </button>
                 <button
                   onClick={handleExportExcel}
                   className="text-xs bg-emerald-500 text-white px-3 py-1 rounded hover:bg-emerald-600"
@@ -313,7 +523,12 @@ export default function Dashboard({ user, onLogout }) {
                      {selectedTricount.users.map(u => (
                         <div key={u.id} className="flex justify-between items-center text-xs bg-slate-50 p-2 rounded dark:bg-slate-800/70">
                            <div>
-                              <div className="font-medium">{u.name}</div>
+                              <div className="font-medium">
+                                {u.name}
+                                {u.auth_id === user?.id && (
+                                  <span className="ml-1 text-[10px] text-emerald-500">(moi)</span>
+                                )}
+                              </div>
                               <div className="text-[10px] text-slate-400">{u.email}</div>
                            </div>
                            <button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-600">×</button>
@@ -474,9 +689,9 @@ export default function Dashboard({ user, onLogout }) {
                                   type="number"
                                   placeholder="1"
                                   className="w-12 text-right text-xs border rounded p-1 outline-none focus:border-emerald-500 dark:bg-slate-900 dark:border-slate-700"
-                                  value={weights[u.id] || ""}
+                                  value={weights[u.id] ?? 1}
                                   onChange={(e) =>
-                                    setWeights({ ...weights, [u.id]: e.target.value })
+                                    setWeights({ ...weights, [u.id]: Number(e.target.value) })
                                   }
                                 />
                                 <span className="text-[10px] text-slate-400">pd</span>
