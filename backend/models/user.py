@@ -7,4 +7,3 @@ class User:
     id: str = field(default_factory=lambda: str(uuid4()))
     name: str = ""
     email: str | None = None
-    auth_id: str | None = None

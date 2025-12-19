@@ -215,7 +215,7 @@ export default function Dashboard({ user, onLogout }) {
       const users = await getUsers(joinTricountId);
 
       const alreadyJoined = users.some(
-        (u) => u.auth_id && u.auth_id === user?.id
+        (u) => u.email && u.email === user?.email
       );
 
       if (alreadyJoined) {
@@ -534,7 +534,7 @@ export default function Dashboard({ user, onLogout }) {
                            <div>
                               <div className="font-medium">
                                 {u.name}
-                                {u.auth_id === user?.id && (
+                                {u.email === user?.email && (
                                   <span className="ml-1 text-[10px] text-emerald-500">(moi)</span>
                                 )}
                               </div>

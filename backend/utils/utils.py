@@ -11,7 +11,7 @@ from backend.services.settlement import compute_settlements
 def tricount_to_dict(tricount: Tricount) -> dict:
     return {
         "id": tricount.id,
-        "owner_auth_id": tricount.owner_auth_id,
+        "owner_email": tricount.owner_email,
         "name": tricount.name,
         "currency": tricount.currency.value,
         "users": [
@@ -19,7 +19,6 @@ def tricount_to_dict(tricount: Tricount) -> dict:
                 "id": u.id,
                 "name": u.name,
                 "email": u.email,
-                "auth_id": u.auth_id,
             }
             for u in tricount.users
         ],
@@ -41,7 +40,7 @@ def tricount_to_dict(tricount: Tricount) -> dict:
 def tricount_from_dict(data: dict) -> Tricount:
     tricount = Tricount(
         id=data["id"],
-        owner_auth_id=data.get("owner_auth_id", ""),
+        owner_email=data.get("owner_email", ""),
         name=data["name"],
         currency=Currency(data["currency"]),
     )
@@ -51,7 +50,6 @@ def tricount_from_dict(data: dict) -> Tricount:
             id=u["id"],
             name=u["name"],
             email=u.get("email"),
-            auth_id=u.get("auth_id"),
         )
         tricount.users.append(user)
 
@@ -83,17 +81,14 @@ def get_tricount_from_id(
 def get_tricount_from_id_with_permissions(
     tricount_id: str,
     tricounts: list[Tricount],
-    user_auth_id: str,
+    user_email: str,
     owner_needed: bool = False,
 ) -> Tricount:
     t = get_tricount_from_id(tricount_id, tricounts=tricounts)
 
     if not (
-        t.owner_auth_id == user_auth_id
-        or (
-            any(u.auth_id == user_auth_id for u in t.users)
-            and not owner_needed
-        )
+        t.owner_email == user_email
+        or (any(u.email == user_email for u in t.users) and not owner_needed)
     ):
         abort(403, "Forbidden")
 
@@ -113,7 +108,6 @@ def tricount_with_balances_to_dict(tricount: Tricount) -> dict:
                 "id": u.id,
                 "name": u.name,
                 "email": u.email,
-                "auth_id": u.auth_id,
             }
             for u in tricount.users
         ],

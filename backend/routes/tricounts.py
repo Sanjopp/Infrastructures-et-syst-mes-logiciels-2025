@@ -19,7 +19,7 @@ tricounts = load_tricounts()
 @tricount_bp.route("", methods=["GET"])
 @jwt_required()
 def list_tricounts():
-    user_auth_id = get_jwt_identity()
+    user_email = get_jwt_identity()
     return jsonify(
         [
             {
@@ -31,8 +31,8 @@ def list_tricounts():
             }
             for tricount in tricounts
             if (
-                any(u.auth_id == user_auth_id for u in tricount.users)
-                or tricount.owner_auth_id == user_auth_id
+                any(u.email == user_email for u in tricount.users)
+                or tricount.owner_email == user_email
             )
         ]
     )
@@ -41,7 +41,7 @@ def list_tricounts():
 @tricount_bp.route("", methods=["POST"])
 @jwt_required()
 def create_tricount():
-    user_auth_id = get_jwt_identity()
+    user_email = get_jwt_identity()
     payload = request.get_json() or {}
     name = (payload.get("name") or "").strip()
 
@@ -49,7 +49,7 @@ def create_tricount():
         return jsonify({"error": "Un nom est requis"}), 400
 
     tricount = Tricount(
-        name=name, owner_auth_id=user_auth_id, currency=Currency.EUR
+        name=name, owner_email=user_email, currency=Currency.EUR
     )
     tricounts.append(tricount)
     save_tricounts(tricounts=tricounts)
@@ -61,7 +61,7 @@ def create_tricount():
 @jwt_required()
 def get_tricount(tricount_id: str):
     tricount = get_tricount_from_id_with_permissions(
-        tricount_id, tricounts=tricounts, user_auth_id=get_jwt_identity()
+        tricount_id, tricounts=tricounts, user_email=get_jwt_identity()
     )
     return jsonify(tricount_with_balances_to_dict(tricount=tricount))
 
@@ -72,7 +72,7 @@ def add_user(tricount_id: str):
     tricount = get_tricount_from_id(
         tricount_id=tricount_id, tricounts=tricounts
     )
-    user_auth_id = get_jwt_identity()
+    user_email = get_jwt_identity()
 
     payload = request.get_json() or {}
     name = (payload.get("name") or "").strip()
@@ -81,7 +81,7 @@ def add_user(tricount_id: str):
     if not name:
         return jsonify({"error": "Un nom est requis"}), 400
 
-    user = tricount.add_user(name=name, email=email, auth_id=user_auth_id)
+    user = tricount.add_user(name=name, email=email)
 
     save_tricounts(tricounts=tricounts)
 
@@ -91,7 +91,6 @@ def add_user(tricount_id: str):
                 "id": user.id,
                 "name": user.name,
                 "email": user.email,
-                "auth_id": user.auth_id,
             }
         ),
         201,
@@ -104,7 +103,7 @@ def delete_user(tricount_id: str, user_id: str):
     tricount = get_tricount_from_id_with_permissions(
         tricount_id=tricount_id,
         tricounts=tricounts,
-        user_auth_id=get_jwt_identity(),
+        user_email=get_jwt_identity(),
         owner_needed=True,
     )
 
@@ -131,7 +130,7 @@ def add_expense(tricount_id: str):
     tricount = get_tricount_from_id_with_permissions(
         tricount_id=tricount_id,
         tricounts=tricounts,
-        user_auth_id=get_jwt_identity(),
+        user_email=get_jwt_identity(),
     )
 
     payload = request.get_json() or {}
@@ -174,7 +173,7 @@ def delete_expense(tricount_id: str, expense_id: str):
     tricount = get_tricount_from_id_with_permissions(
         tricount_id=tricount_id,
         tricounts=tricounts,
-        user_auth_id=get_jwt_identity(),
+        user_email=get_jwt_identity(),
     )
 
     tricount.expenses = [e for e in tricount.expenses if e.id != expense_id]
@@ -189,7 +188,7 @@ def export_tricount_excel(tricount_id: str):
     tricount = get_tricount_from_id_with_permissions(
         tricount_id=tricount_id,
         tricounts=tricounts,
-        user_auth_id=get_jwt_identity(),
+        user_email=get_jwt_identity(),
     )
 
     output = export_tricount_to_excel(tricount=tricount)
@@ -211,7 +210,7 @@ def delete_tricount(tricount_id: str):
     if not get_tricount_from_id_with_permissions(
         tricount_id=tricount_id,
         tricounts=tricounts,
-        user_auth_id=get_jwt_identity(),
+        user_email=get_jwt_identity(),
         owner_needed=True,
     ):
         return (
@@ -232,7 +231,7 @@ def invite_new_user(tricount_id: str):
     tricount = get_tricount_from_id_with_permissions(
         tricount_id=tricount_id,
         tricounts=tricounts,
-        user_auth_id=get_jwt_identity(),
+        user_email=get_jwt_identity(),
     )
     return jsonify({"tricount_id": tricount.id})
 
@@ -250,7 +249,6 @@ def get_users(tricount_id: str):
                     "id": user.id,
                     "name": user.name,
                     "email": user.email,
-                    "auth_id": user.auth_id,
                 }
                 for user in tricount.users
             ]
@@ -262,18 +260,15 @@ def get_users(tricount_id: str):
 @tricount_bp.route("/<tricount_id>/join/<user_id>", methods=["POST"])
 @jwt_required()
 def join_tricount(tricount_id: str, user_id: str):
-    user_auth_id = get_jwt_identity()
+    user_email = get_jwt_identity()
     tricount = get_tricount_from_id(
         tricount_id=tricount_id, tricounts=tricounts
     )
 
-    if any(
-        u.auth_id == user_auth_id and user_id != u.id for u in tricount.users
-    ):
+    if any(u.email == user_email and user_id != u.id for u in tricount.users):
         return jsonify({"error": "Vous avez déjà rejoint ce 3compte"}), 404
 
-    user = tricount.modify_user_auth_id(user_id=user_id, auth_id=user_auth_id)
-
+    user = tricount.modify_user_email(user_id=user_id, email=user_email)
     save_tricounts(tricounts=tricounts)
 
     return (
@@ -282,7 +277,6 @@ def join_tricount(tricount_id: str, user_id: str):
                 "id": user.id,
                 "name": user.name,
                 "email": user.email,
-                "auth_id": user.auth_id,
             }
         ),
         201,

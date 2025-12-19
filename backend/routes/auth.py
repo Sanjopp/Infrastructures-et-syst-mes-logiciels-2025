@@ -51,7 +51,7 @@ def login():
     if auth_user and bcrypt.check_password_hash(
         auth_user.password_hash, password
     ):
-        access_token = create_access_token(identity=auth_user.id)
+        access_token = create_access_token(identity=auth_user.email)
 
         return (
             jsonify(
