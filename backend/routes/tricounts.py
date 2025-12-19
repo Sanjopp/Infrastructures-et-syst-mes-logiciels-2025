@@ -135,7 +135,7 @@ def add_user(tricount_id: str):
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
-    user = t.add_user(name=name, auth_id=user_auth_id)
+    user = t.add_user(name=name, auth_id=user_auth_id, email=email)
 
     save_tricounts(tricounts)
 

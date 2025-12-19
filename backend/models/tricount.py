@@ -16,8 +16,8 @@ class Tricount:
     users: list[User] = field(default_factory=list)
     expenses: list[Expense] = field(default_factory=list)
 
-    def add_user(self, name: str, auth_id: str) -> User:
-        user = User(name=name, auth_id=auth_id)
+    def add_user(self, name: str, auth_id: str, email: str) -> User:
+        user = User(name=name, auth_id=auth_id, email=email)
         self.users.append(user)
         return user
 
