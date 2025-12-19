@@ -66,7 +66,7 @@ export async function fetchTricountDetail(id) {
       ...getAuthHeaders(),
     },
   });
-  return handleResponse(res, "Échec de la récupération des détails du tricount");
+  return handleResponse(res, "Échec de la récupération des détails du 3Compte");
 }
 
 export async function createTricount(name) {
@@ -78,7 +78,7 @@ export async function createTricount(name) {
     },
     body: JSON.stringify({ name }),
   });
-  return handleResponse(res, "Échec de la création du tricount");
+  return handleResponse(res, "Échec de la création du 3Compte");
 }
 
 export async function deleteTricount(id) {
@@ -88,7 +88,7 @@ export async function deleteTricount(id) {
       ...getAuthHeaders(),
     },
   });
-  return handleResponse(res, "Échec de la suppression du tricount");
+  return handleResponse(res, "Échec de la suppression du 3Compte");
 }
 
 export async function addUser(tricountId, payload) {
@@ -184,17 +184,18 @@ export async function getUsers(tricountId) {
   return handleResponse(res, "Impossible de récupérer les utilisateurs");
 }
 
-export async function joinTricount(tricountId, userId) {
+export async function joinTricount(tricountId, payload) {
   const res = await fetch(
-    `${API_BASE}/tricounts/${tricountId}/join/${userId}`,
+    `${API_BASE}/tricounts/${tricountId}/join`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...getAuthHeaders(),
       },
+      body: JSON.stringify(payload),
     }
   );
 
-  return handleResponse(res, "Impossible de rejoindre le tricount");
+  return handleResponse(res, "Impossible de rejoindre le 3Compte");
 }

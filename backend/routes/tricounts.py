@@ -69,14 +69,16 @@ def get_tricount(tricount_id: str):
 @tricount_bp.route("/<tricount_id>/users", methods=["POST"])
 @jwt_required()
 def add_user(tricount_id: str):
-    tricount = get_tricount_from_id(
-        tricount_id=tricount_id, tricounts=tricounts
+    tricount = get_tricount_from_id_with_permissions(
+        tricount_id=tricount_id,
+        tricounts=tricounts,
+        user_email=get_jwt_identity(),
     )
     user_email = get_jwt_identity()
 
     payload = request.get_json() or {}
     name = (payload.get("name") or "").strip()
-    email = (payload.get("email") or "").strip() or None
+    email = (payload.get("email") or "").strip() or user_email
 
     if not name:
         return jsonify({"error": "Un nom est requis"}), 400
@@ -257,18 +259,26 @@ def get_users(tricount_id: str):
     )
 
 
-@tricount_bp.route("/<tricount_id>/join/<user_id>", methods=["POST"])
+@tricount_bp.route("/<tricount_id>/join", methods=["POST"])
 @jwt_required()
-def join_tricount(tricount_id: str, user_id: str):
+def join_tricount(tricount_id: str):
     user_email = get_jwt_identity()
     tricount = get_tricount_from_id(
         tricount_id=tricount_id, tricounts=tricounts
     )
 
-    if any(u.email == user_email and user_id != u.id for u in tricount.users):
-        return jsonify({"error": "Vous avez déjà rejoint ce 3compte"}), 404
+    payload = request.get_json() or {}
+    name = (payload.get("name") or "").strip()
+    user_id = payload.get("user_id")
+    email = (payload.get("email") or "").strip() or user_email
 
-    user = tricount.modify_user_email(user_id=user_id, email=user_email)
+    if not user_id:
+        user = tricount.add_user(name=name, email=email)
+    else:
+        if not name:
+            return jsonify({"error": "Un nom est requis"}), 400
+        user = tricount.modify_user_email(user_id=user_id, email=user_email)
+
     save_tricounts(tricounts=tricounts)
 
     return (
