@@ -22,3 +22,8 @@ repos:
         - id: nbstripout
           name: nbstripout (strip outputs from notebooks)
           files: \.ipynb$
+    - repo: https://github.com/pycqa/flake8
+      rev: 7.1.1
+      hooks:
+        - id: flake8
+          args: ["--max-line-length=150"]
