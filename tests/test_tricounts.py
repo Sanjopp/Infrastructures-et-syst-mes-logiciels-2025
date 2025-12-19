@@ -1,7 +1,3 @@
-# tests/test_tricounts.py
-import pytest
-
-
 def test_create_tricount(client, auth_headers):
     """Test creating a new tricount."""
     response = client.post(

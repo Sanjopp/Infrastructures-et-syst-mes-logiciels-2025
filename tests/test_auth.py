@@ -1,7 +1,3 @@
-# tests/test_auth.py
-import pytest
-
-
 def test_register_success(client):
     """Test successful user registration."""
     response = client.post(

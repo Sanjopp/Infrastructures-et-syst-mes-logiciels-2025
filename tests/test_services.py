@@ -1,6 +1,3 @@
-# tests/test_services.py
-import pytest
-
 from backend.models.currency import Currency
 from backend.models.tricount import Tricount
 from backend.services.balance import compute_balances

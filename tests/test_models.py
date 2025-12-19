@@ -1,5 +1,3 @@
-import pytest
-
 from backend.models.currency import Currency
 from backend.models.expense import Expense
 from backend.models.tricount import Tricount
