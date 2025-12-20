@@ -1,30 +1,41 @@
 import { useEffect, useState } from "react";
-
-const API_BASE = "/api";
+import {
+  fetchTricounts,
+  fetchTricountDetail,
+  createTricount,
+  addUser,
+  deleteUser,
+  addExpense,
+  deleteExpense,
+  deleteTricount,
+  exportExcel,
+  inviteTricount,
+  getUsers,
+  joinTricount,
+} from "../api";
 
 export default function Dashboard({ user, onLogout }) {
-
   const [tricounts, setTricounts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedTricount, setSelectedTricount] = useState(null);
-
   const [loadingList, setLoadingList] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
-
   const [newName, setNewName] = useState("");
-
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
-
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [payerId, setPayerId] = useState("");
   const [participants, setParticipants] = useState([]);
-
   const [splitMode, setSplitMode] = useState("equal");
   const [weights, setWeights] = useState({});
   const [expandedExpenseId, setExpandedExpenseId] = useState(null);
+  const [joinStep, setJoinStep] = useState("idle");
+  const [joinTricountId, setJoinTricountId] = useState("");
+  const [joinUsers, setJoinUsers] = useState([]);
+  const [joinExistingUserId, setJoinExistingUserId] = useState(null);
+  const [joinNewUserName, setJoinNewUserName] = useState("");
 
   useEffect(() => {
     loadTricounts();
@@ -34,15 +45,11 @@ export default function Dashboard({ user, onLogout }) {
     try {
       setLoadingList(true);
       setError("");
-      const res = await fetch(`${API_BASE}/tricounts`);
-      if (!res.ok) {
-        throw new Error("Failed to load tricounts");
-      }
-      const data = await res.json();
+      const data = await fetchTricounts();
       setTricounts(data);
     } catch (e) {
       console.error(e);
-      setError("Erreur lors du chargement des tricounts.");
+      setError(e.message);
     } finally {
       setLoadingList(false);
     }
@@ -52,28 +59,12 @@ export default function Dashboard({ user, onLogout }) {
     try {
       setLoadingDetail(true);
       setError("");
-      const res = await fetch(`${API_BASE}/tricounts/${id}`);
-      if (!res.ok) {
-        if (res.status === 404) {
-          setSelectedTricount(null);
-          setError("Tricount introuvable (404).");
-          return;
-        }
-        throw new Error("Failed to load tricount detail");
-      }
-      const data = await res.json();
+      const data = await fetchTricountDetail(id);
       setSelectedTricount(data);
       setSelectedId(id);
-
-      setUserName("");
-      setUserEmail("");
-      setDesc("");
-      setAmount("");
-      setPayerId("");
-      setParticipants([]);
     } catch (e) {
       console.error(e);
-      setError("Erreur lors du chargement du tricount.");
+      setError(e.message);
     } finally {
       setLoadingDetail(false);
     }
@@ -81,233 +72,216 @@ export default function Dashboard({ user, onLogout }) {
 
   async function handleCreateTricount(e) {
     e.preventDefault();
-    if (!newName.trim()) return;
-
     try {
-      setError("");
-      const res = await fetch(`${API_BASE}/tricounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur création tricount.");
-      }
-
-      const created = await res.json();
+      const created = await createTricount(newName);
       setNewName("");
       await loadTricounts();
       await loadTricountDetail(created.id);
     } catch (e) {
       console.error(e);
-      setError(e.message || "Erreur lors de la création du tricount.");
+      setError(e.message);
     }
   }
 
   async function handleAddUser(e) {
     e.preventDefault();
-    if (!selectedTricount) return;
-    if (!userName.trim()) return;
-
     try {
-      setError("");
-      const res = await fetch(
-        `${API_BASE}/tricounts/${selectedTricount.id}/users`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: userName.trim(),
-            email: userEmail.trim() || null,
-          }),
-        }
-      );
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur ajout utilisateur.");
-      }
-
+      await addUser(selectedTricount.id, {
+        name: userName,
+        email: userEmail || null,
+      });
+      setUserName("");
+      setUserEmail("");
       await loadTricountDetail(selectedTricount.id);
       await loadTricounts();
     } catch (e) {
       console.error(e);
-      setError(e.message || "Erreur réseau lors de l'ajout utilisateur.");
+      setError(e.message);
     }
   }
 
-  function toggleParticipant(id) {
-    setParticipants((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
-
   async function handleAddExpense(e) {
-      e.preventDefault();
-      if (!selectedTricount) return;
+    e.preventDefault();
+    if (!selectedTricount) return;
 
-      if (!desc.trim() || !amount || !payerId || participants.length === 0) {
-        setError("Merci de remplir tous les champs (et au moins un participant).");
-        return;
-      }
+    if (!desc.trim() || !amount || !payerId || participants.length === 0) {
+      setError("Veuillez remplir tous les champs.");
+      return;
+    }
 
-      const payload = {
-        description: desc.trim(),
-        amount: parseFloat(amount),
-        payer_id: payerId,
-        participants_ids: participants,
-        weights: {},
-      };
+    const payload = {
+      description: desc.trim(),
+      amount: parseFloat(amount),
+      payer_id: payerId,
+      participants_ids: participants,
+      weights: {},
+    };
 
-      if (splitMode === "weighted") {
+    if (splitMode === "weighted") {
         const weightMap = {};
         participants.forEach((uid) => {
-          weightMap[uid] = parseFloat(weights[uid]) || 0;
+          weightMap[uid] = Math.max(1, parseFloat(weights[uid] ?? 1));
         });
         payload.weights = weightMap;
       }
 
-      try {
-        setError("");
-        const res = await fetch(
-          `${API_BASE}/tricounts/${selectedTricount.id}/expenses`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }
-        );
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Erreur ajout dépense.");
-        }
-
-        await loadTricountDetail(selectedTricount.id);
-        await loadTricounts();
-
-        setDesc(""); setAmount("");
-      } catch (e) {
-        console.error(e);
-        setError(e.message || "Erreur réseau lors de l'ajout dépense.");
-      }
+    try {
+      await addExpense(selectedTricount.id, payload);
+      setDesc("");
+      setAmount("");
+      setPayerId("");
+      setParticipants([]);
+      setWeights({});
+      await loadTricountDetail(selectedTricount.id);
+      await loadTricounts();
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
     }
+  }
 
   async function handleDeleteUser(userId) {
-    if (!selectedId) return;
     if (!window.confirm("Supprimer cet utilisateur ?")) return;
-
     try {
-      setError("");
-      const res = await fetch(
-        `${API_BASE}/tricounts/${selectedId}/users/${userId}`,
-        { method: "DELETE" }
-      );
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Erreur lors de la suppression.");
-        return;
-      }
-
+      const data = await deleteUser(selectedId, userId);
       setSelectedTricount(data);
       loadTricounts();
     } catch (e) {
       console.error(e);
-      setError("Erreur réseau suppression utilisateur.");
+      setError(e.message);
     }
   }
 
   async function handleDeleteExpense(expenseId) {
-    if (!selectedId) return;
     if (!window.confirm("Supprimer cette dépense ?")) return;
-
     try {
-      setError("");
-      const res = await fetch(
-        `${API_BASE}/tricounts/${selectedId}/expenses/${expenseId}`,
-        { method: "DELETE" }
-      );
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Erreur suppression dépense.");
-        return;
-      }
+      const data = await deleteExpense(selectedId, expenseId);
       setSelectedTricount(data);
       loadTricounts();
     } catch (e) {
       console.error(e);
-      setError("Erreur réseau suppression dépense.");
+      setError(e.message);
+    }
+  }
+
+  async function handleDeleteTricount() {
+    if (!window.confirm("Supprimer ce 3Compte ?")) return;
+    try {
+      await deleteTricount(selectedTricount.id);
+      setSelectedTricount(null);
+      setSelectedId(null);
+      loadTricounts();
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
     }
   }
 
   async function handleExportExcel() {
-    if (!selectedTricount) return;
-
     try {
-      const res = await fetch(
-        `/api/tricounts/${selectedTricount.id}/export/excel`
-      );
-
-      if (!res.ok) {
-        throw new Error("Export failed");
-      }
-
-      const blob = await res.blob();
+      const blob = await exportExcel(selectedTricount.id);
       const url = window.URL.createObjectURL(blob);
-
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${selectedTricount.name || "tricount"}.xlsx`;
-      document.body.appendChild(a);
+      a.download = `${selectedTricount.name}.xlsx`;
       a.click();
-      a.remove();
-
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
-      setError("Erreur lors de l'export Excel.");
+      setError(e.message);
     }
   }
-  async function handleDeleteTricount() {
-    if (!selectedTricount) return;
 
-    const confirmed = window.confirm(
-      "Êtes-vous sûr de vouloir supprimer ce tricount ? Cette action est définitive."
-    );
-    if (!confirmed) return;
+  async function handleInvite() {
+    try {
+      const data = await inviteTricount(selectedTricount.id);
+
+      window.prompt(
+        "Partager cet identifiant pour rejoindre le 3Compte :",
+        data.tricount_id
+      );
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
+    }
+  }
+
+  async function handleLoadJoinTricount(e) {
+    e.preventDefault();
+    setError("");
 
     try {
-      setError("");
+      const users = await getUsers(joinTricountId);
 
-      const res = await fetch(
-        `/api/tricounts/${selectedTricount.id}`,
-        { method: "DELETE" }
+      const alreadyJoined = users.some(
+        (u) => u.email && u.email === user?.email
       );
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur lors de la suppression du tricount.");
+      if (alreadyJoined) {
+        setError("Vous avez déjà rejoint ce 3Compte.");
+        return;
       }
 
+      setJoinUsers(users);
+      setJoinStep("loaded");
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
+    }
+  }
 
-      setSelectedTricount(null);
-      setSelectedId(null);
+  async function handleConfirmJoin() {
+    try {
+      let payload = {};
+
+      if (joinExistingUserId) {
+        payload = {
+          user_id: joinExistingUserId,
+        };
+      } else {
+        payload = {
+          name: joinNewUserName,
+        };
+      }
+
+      await joinTricount(joinTricountId);
+
+      setJoinStep("idle");
+      setJoinTricountId("");
+      setJoinUsers([]);
+      setJoinExistingUserId("");
+      setJoinNewUserName("");
 
       await loadTricounts();
     } catch (e) {
       console.error(e);
-      setError(e.message || "Erreur réseau lors de la suppression.");
+      setError(e.message);
     }
+  }
+
+  function toggleParticipant(id) {
+    setParticipants((prev) => {
+      const isSelected = prev.includes(id);
+
+      if (isSelected) {
+        setWeights((w) => {
+          const { [id]: _, ...rest } = w;
+          return rest;
+        });
+        return prev.filter((x) => x !== id);
+      } else {
+        setWeights((w) => ({
+          ...w,
+          [id]: 1,
+        }));
+        return [...prev, id];
+      }
+    });
   }
 
 
   const balances = selectedTricount?.balances || {};
   const settlements = selectedTricount?.settlements || [];
-
 
   return (
     <div className="max-w-6xl mx-auto flex gap-6 px-6 py-8">
@@ -340,11 +314,11 @@ export default function Dashboard({ user, onLogout }) {
 
         <div className="flex-1 flex flex-col gap-2 overflow-hidden">
           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-            Mes tricounts
+            Mes 3Comptes
           </h2>
           <div className="flex-1 overflow-y-auto pr-1">
             {tricounts.length === 0 ? (
-              <p className="text-xs text-slate-500">Aucun tricount.</p>
+              <p className="text-xs text-slate-500">Aucun 3Compte.</p>
             ) : (
               <ul className="space-y-1 text-sm">
                 {tricounts.map((t) => (
@@ -373,30 +347,122 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
-          <h3 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-300">Nouveau tricount</h3>
-          <form onSubmit={handleCreateTricount} className="space-y-2">
-            <input
-              type="text"
-              placeholder="Ex : Voyage..."
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-900 dark:border-slate-700"
-            />
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition"
-            >
-              Créer
-            </button>
-          </form>
+        <div className="border-t border-slate-200 pt-3 space-y-4 dark:border-slate-800">
+          <div>
+            <h3 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-300">
+              Nouveau 3Compte
+            </h3>
+            <form onSubmit={handleCreateTricount} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Ex : Voyage..."
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-900 dark:border-slate-700"
+              />
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition"
+              >
+                Créer
+              </button>
+            </form>
+          </div>
         </div>
+
+        <div className="border-t border-slate-200 pt-3 space-y-4 dark:border-slate-800">
+          <div>
+            <h3 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-300">
+              Rejoindre un 3Compte existant
+            </h3>
+
+            {joinStep === "idle" && (
+              <form
+                onSubmit={handleLoadJoinTricount}
+                className="space-y-2"
+              >
+                <input
+                  type="text"
+                  placeholder="ID du 3Compte"
+                  value={joinTricountId}
+                  onChange={(e) => setJoinTricountId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-900 dark:border-slate-700"
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition"
+                >
+                  Rejoindre
+                  </button>
+              </form>
+            )}
+
+            {joinStep === "loaded" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Utilisateur existant</label>
+                  <select
+                    value={joinExistingUserId}
+                    onChange={(e) => setJoinExistingUserId(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
+                  >
+                    <option value="">— Sélectionner —</option>
+                    {joinUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="text-center text-[10px] text-slate-400">ou</div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Créer un nouvel utilisateur</label>
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    value={joinNewUserName}
+                    onChange={(e) => setJoinNewUserName(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setJoinStep("idle");
+                      setJoinTricountId("");
+                      setJoinUsers([]);
+                      setJoinExistingUserId("");
+                      setJoinNewUserName("");
+                    }}
+                    className="flex-1 bg-slate-200 text-slate-700 text-xs py-1.5 rounded hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    Annuler
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmJoin}
+                    className="flex-1 bg-emerald-500 text-white text-xs py-1.5 rounded hover:bg-emerald-600 transition"
+                    disabled={!joinExistingUserId && !joinNewUserName}
+                  >
+                    Rejoindre
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
       </aside>
 
       <main className="flex-1 flex flex-col gap-4">
         {!selectedTricount && !loadingDetail && (
           <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-            Sélectionne un tricount à gauche.
+            Sélectionne un 3Compte à gauche.
           </div>
         )}
         {loadingDetail && <div className="text-center text-slate-400 text-sm">Chargement...</div>}
@@ -410,6 +476,12 @@ export default function Dashboard({ user, onLogout }) {
               </div>
               <div className="flex gap-2">
 
+                <button
+                  onClick={handleInvite}
+                  className="text-xs bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800"
+                >
+                  Inviter un utilisateur
+                </button>
                 <button
                   onClick={handleExportExcel}
                   className="text-xs bg-emerald-500 text-white px-3 py-1 rounded hover:bg-emerald-600"
@@ -436,7 +508,12 @@ export default function Dashboard({ user, onLogout }) {
                      {selectedTricount.users.map(u => (
                         <div key={u.id} className="flex justify-between items-center text-xs bg-slate-50 p-2 rounded dark:bg-slate-800/70">
                            <div>
-                              <div className="font-medium">{u.name}</div>
+                              <div className="font-medium">
+                                {u.name}
+                                {u.email === user?.email && (
+                                  <span className="ml-1 text-[10px] text-emerald-500">(moi)</span>
+                                )}
+                              </div>
                               <div className="text-[10px] text-slate-400">{u.email}</div>
                            </div>
                            <button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-600">×</button>
@@ -597,9 +674,9 @@ export default function Dashboard({ user, onLogout }) {
                                   type="number"
                                   placeholder="1"
                                   className="w-12 text-right text-xs border rounded p-1 outline-none focus:border-emerald-500 dark:bg-slate-900 dark:border-slate-700"
-                                  value={weights[u.id] || ""}
+                                  value={weights[u.id] ?? 1}
                                   onChange={(e) =>
-                                    setWeights({ ...weights, [u.id]: e.target.value })
+                                    setWeights({ ...weights, [u.id]: Number(e.target.value) })
                                   }
                                 />
                                 <span className="text-[10px] text-slate-400">pd</span>

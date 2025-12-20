@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-const API_BASE = "/api";
+import { login, register } from "../api";
 
 export default function Auth({ onLogin }) {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -13,34 +12,26 @@ export default function Auth({ onLogin }) {
     e.preventDefault();
     setError("");
 
-    const endpoint = isRegistering ? "/auth/register" : "/auth/login";
-
-    const body = { email, password };
-    if (isRegistering) body.name = name;
-
     try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Une erreur est survenue");
-      }
-
       if (isRegistering) {
+        await register({
+          name,
+          email,
+          password,
+        });
+
         setIsRegistering(false);
-        setError("Compte créé ! Connectez-vous.");
         setPassword("");
-      } else {
-        onLogin(data.access_token, data.user);
+        setError("Compte créé ! Connectez-vous.");
+        return;
       }
+
+      const data = await login(email, password);
+
+      onLogin(data.auth_user);
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      setError(err.message || "Une erreur est survenue");
     }
   }
 
@@ -55,7 +46,13 @@ export default function Auth({ onLogin }) {
         </p>
 
         {error && (
-          <div className={`mb-4 p-2 text-xs rounded border ${error.includes("créé") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+          <div
+            className={`mb-4 p-2 text-xs rounded border ${
+              error.includes("créé")
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
             {error}
           </div>
         )}

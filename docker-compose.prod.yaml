@@ -9,7 +9,8 @@ services:
     restart: always
     volumes:
       - data:/app/data
-
+    env_file:
+      - .env
   frontend:
       build:
         context: ./frontend

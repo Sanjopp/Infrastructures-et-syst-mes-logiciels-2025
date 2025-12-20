@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import Auth from "./components/Auth";
 import Dashboard from "./components/Dashboard";
+import { logout as apiLogout } from "./api";
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("user");
+    const saved = localStorage.getItem("auth_user");
     try {
       return saved ? JSON.parse(saved) : null;
     } catch {
@@ -21,30 +21,30 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (theme === "dark") document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((p) => (p === "dark" ? "light" : "dark"));
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
-  const handleLogin = (newToken, newUser) => {
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
+  const handleLogin = (authUser) => {
+    localStorage.setItem("auth_user", JSON.stringify(authUser));
+    setUser(authUser);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setToken(null);
+    apiLogout();
+    localStorage.removeItem("auth_user");
     setUser(null);
   };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
-
       <div className="fixed top-4 right-4 z-50">
         <button
           onClick={toggleTheme}
@@ -55,7 +55,7 @@ function App() {
         </button>
       </div>
 
-      {!token ? (
+      {!user ? (
         <Auth onLogin={handleLogin} />
       ) : (
         <Dashboard user={user} onLogout={handleLogout} />
