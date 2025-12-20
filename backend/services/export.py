@@ -13,7 +13,7 @@ def export_tricount_to_excel(tricount: Tricount) -> BytesIO:
     ws_exp = wb.active
     ws_exp.title = "Dépenses"
     ws_exp.append(
-        ["Description", "Montant", "Devise", "Payeur", "Participants"]
+       ["Description", "Montant", "Devise", "Payeur", "Participants", "Poids"]
     )
 
     for expense in tricount.expenses:
@@ -29,16 +29,22 @@ def export_tricount_to_excel(tricount: Tricount) -> BytesIO:
         for user in tricount.users:
             if user.id in expense.participants_ids:
                 participant_names.append(user.name)
+        
+        weights_list = []
 
-        ws_exp.append(
-            [
-                expense.description,
-                expense.amount,
-                expense.currency.value,
-                payer_name,
-                ", ".join(participant_names),
-            ]
-        )
+        for participant_id in expense.participants_ids:
+            weight = expense.weights.get(participant_id, 1)
+            weights_list.append(weight)
+
+        ws_exp.append([
+            expense.description,
+            expense.amount,
+            expense.currency.value,
+            payer_name,
+            ", ".join(participant_names),
+            ", ".join(str(weight) for weight in weights_list),
+        ])
+
 
     ws_bal = wb.create_sheet(title="Soldes")
     ws_bal.append(["Utilisateur", "Solde"])
