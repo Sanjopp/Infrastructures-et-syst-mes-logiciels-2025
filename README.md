@@ -13,7 +13,7 @@ Once installed, Pre-commit will automatically run the defined checks and formatt
 This project uses Docker Compose to build and run the app. Make sure you have Docker Engine installed and running on your machine.
 
 ### .env file
-You need a .env file looking like
+You need an .env file looking like
 ```
 JWT_SECRET_KEY=xxx
 ```
@@ -55,4 +55,25 @@ To stop and remove all running containers:
 
 ```bash
 docker compose -f docker-compose.{env}.yaml down
+```
+
+## Tests
+To run the tests, you have to install the requirements:
+
+```bash
+pip install -r requirements.txt
+```
+
+and then run pytest (with verbose if you want more information on what is happening):
+
+```bash
+pytest -v
+```
+
+Both must be run from the root of the project.
+
+As for the deployment of the app, you need an .env file looking like
+
+```
+JWT_SECRET_KEY=xxx
 ```

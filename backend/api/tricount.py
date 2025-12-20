@@ -1,12 +1,15 @@
 import os
 from datetime import timedelta
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 from backend.extensions import bcrypt, jwt
 from backend.routes.auth import auth_bp
 from backend.routes.tricounts import tricount_bp
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")

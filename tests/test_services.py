@@ -5,14 +5,12 @@ from backend.services.settlement import compute_settlements
 
 
 def test_compute_balances_simple():
-    """Test balance computation with simple expense."""
-    tricount = Tricount(name="Test", currency=Currency.EUR)
-    user1 = tricount.add_user("Dric", "auth1")
-    user2 = tricount.add_user("Kouka", "auth2")
+    tricount = Tricount(name="Tricount", currency=Currency.EUR)
+    user1 = tricount.add_user("User1", "user1@test.com")
+    user2 = tricount.add_user("User2", "user2@test.com")
 
-    # Dric pays 100 for both
     tricount.add_expense(
-        description="Dinner",
+        description="Expense",
         amount=100.0,
         payer_id=user1.id,
         participants_ids=[user1.id, user2.id],
@@ -20,19 +18,15 @@ def test_compute_balances_simple():
 
     balances = compute_balances(tricount)
 
-    # Dric should be +50 (paid 100, owes 50)
-    # Kouka should be -50 (paid 0, owes 50)
     assert balances[user1.id] == 50.0
     assert balances[user2.id] == -50.0
 
 
 def test_compute_balances_multiple_expenses():
-    """Test balance computation with multiple expenses."""
-    tricount = Tricount(name="Test", currency=Currency.EUR)
-    user1 = tricount.add_user("Dric", "auth1")
-    user2 = tricount.add_user("Kouka", "auth2")
+    tricount = Tricount(name="Tricount", currency=Currency.EUR)
+    user1 = tricount.add_user("User1", "user1@test.com")
+    user2 = tricount.add_user("User2", "user2@test.com")
 
-    # Dric pays 90
     tricount.add_expense(
         description="Expense 1",
         amount=90.0,
@@ -40,7 +34,6 @@ def test_compute_balances_multiple_expenses():
         participants_ids=[user1.id, user2.id],
     )
 
-    # Bob pays 60
     tricount.add_expense(
         description="Expense 2",
         amount=60.0,
@@ -50,22 +43,18 @@ def test_compute_balances_multiple_expenses():
 
     balances = compute_balances(tricount)
 
-    # Dric: paid 90, owes 75 (half of 150) = +15
-    # Kouka: paid 60, owes 75 = -15
     assert balances[user1.id] == 15.0
     assert balances[user2.id] == -15.0
 
 
 def test_compute_balances_with_weights():
-    """Test balance computation with weighted expenses."""
-    tricount = Tricount(name="Test", currency=Currency.EUR)
-    user1 = tricount.add_user("Dric", "auth1")
-    user2 = tricount.add_user("Kouka", "auth2")
-    user3 = tricount.add_user("Zak", "auth3")
+    tricount = Tricount(name="Tricount", currency=Currency.EUR)
+    user1 = tricount.add_user("User1", "user1@test.com")
+    user2 = tricount.add_user("User2", "user2@test.com")
+    user3 = tricount.add_user("User3", "user3@test.com")
 
-    # Dric pays 120, but weighted: Dric 1, Kouka 2, Zak 3
     tricount.add_expense(
-        description="Weighted expense",
+        description="Weighted Expense",
         amount=120.0,
         payer_id=user1.id,
         participants_ids=[user1.id, user2.id, user3.id],
@@ -74,43 +63,34 @@ def test_compute_balances_with_weights():
 
     balances = compute_balances(tricount)
 
-    # Total weight = 6
-    # Dric: paid 120, owes 20 (1/6 of 120) = +100
-    # Kouka: paid 0, owes 40 (2/6 of 120) = -40
-    # Zak: paid 0, owes 60 (3/6 of 120) = -60
     assert balances[user1.id] == 100.0
     assert balances[user2.id] == -40.0
     assert balances[user3.id] == -60.0
 
 
 def test_compute_settlements_simple():
-    """Test settlement computation with simple case."""
     balances = {
-        "user1": 50.0,  # Dric is owed 50
-        "user2": -50.0,  # Kouka owes 50
+        "User1": 50.0,
+        "User2": -50.0,
     }
 
     settlements = compute_settlements(balances)
 
     assert len(settlements) == 1
-    assert settlements[0] == ("user2", "user1", 50.0)
+    assert settlements[0] == ("User2", "User1", 50.0)
 
 
 def test_compute_settlements_multiple():
-    """Test settlement computation with multiple users."""
-    balances = {"hamza": 60.0, "vincent": -30.0, "zak": -30.0}
-
+    balances = {"User1": 60.0, "User2": -30.0, "User3": -30.0}
     settlements = compute_settlements(balances)
 
-    # Vincent and Zak should each pay Hamza 30
     assert len(settlements) == 2
-    assert ("vincent", "hamza", 30.0) in settlements
-    assert ("zak", "hamza", 30.0) in settlements
+    assert ("User2", "User1", 30.0) in settlements
+    assert ("User3", "User1", 30.0) in settlements
 
 
 def test_compute_settlements_complex():
-    """Test settlement computation with complex case."""
-    balances = {"dric": 100.0, "kouka": 50.0, "zak": -80.0, "vincent": -70.0}
+    balances = {"User1": 100.0, "User2": 50.0, "User3": -80.0, "User4": -70.0}
 
     settlements = compute_settlements(balances)
 
@@ -126,8 +106,7 @@ def test_compute_settlements_complex():
 
 
 def test_compute_settlements_balanced():
-    """Test settlement when everyone is balanced."""
-    balances = {"user1": 0.0, "user2": 0.0, "user3": 0.0}
+    balances = {"User1": 0.0, "User2": 0.0, "User3": 0.0}
 
     settlements = compute_settlements(balances)
     assert len(settlements) == 0

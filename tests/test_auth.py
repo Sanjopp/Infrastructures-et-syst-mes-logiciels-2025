@@ -1,11 +1,10 @@
 def test_register_success(client):
-    """Test successful user registration."""
     response = client.post(
         "/api/auth/register",
         json={
-            "email": "newuser@example.com",
-            "password": "securepass123",
-            "name": "New User",
+            "email": "user@test.com",
+            "password": "pass123",
+            "name": "User",
         },
     )
 
@@ -16,37 +15,36 @@ def test_register_success(client):
 
 
 def test_register_missing_fields(client):
-    """Test registration with missing fields."""
     # Missing password
     response = client.post(
         "/api/auth/register",
-        json={"email": "user@example.com", "name": "User"},
+        json={"email": "user@test.com", "name": "User no password"},
     )
     assert response.status_code == 400
 
     # Missing email
     response = client.post(
-        "/api/auth/register", json={"password": "pass123", "name": "User"}
+        "/api/auth/register",
+        json={"password": "pass123", "name": "User no email"},
     )
     assert response.status_code == 400
 
     # Missing name
     response = client.post(
         "/api/auth/register",
-        json={"email": "user@example.com", "password": "pass123"},
+        json={"email": "usernoname@test.com", "password": "pass123"},
     )
     assert response.status_code == 400
 
 
 def test_register_duplicate_email(client):
-    """Test registration with duplicate email."""
-    # First registration
+    # Register user
     client.post(
         "/api/auth/register",
         json={
-            "email": "duplicate@example.com",
+            "email": "user@test.com",
             "password": "pass123",
-            "name": "User One",
+            "name": "User 1",
         },
     )
 
@@ -54,9 +52,9 @@ def test_register_duplicate_email(client):
     response = client.post(
         "/api/auth/register",
         json={
-            "email": "duplicate@example.com",
-            "password": "pass456",
-            "name": "User Two",
+            "email": "user@test.com",
+            "password": "pass123",
+            "name": "User 2",
         },
     )
 
@@ -66,39 +64,37 @@ def test_register_duplicate_email(client):
 
 
 def test_login_success(client):
-    """Test successful login."""
-    # Register user first
+    # Register user
     client.post(
         "/api/auth/register",
         json={
-            "email": "login@example.com",
-            "password": "mypass123",
-            "name": "Login User",
+            "email": "user@test.com",
+            "password": "pass123",
+            "name": "User",
         },
     )
 
     # Login
     response = client.post(
         "/api/auth/login",
-        json={"email": "login@example.com", "password": "mypass123"},
+        json={"email": "user@test.com", "password": "pass123"},
     )
 
     assert response.status_code == 200
     data = response.get_json()
     assert "access_token" in data
     assert "auth_user" in data
-    assert data["auth_user"]["email"] == "login@example.com"
-    assert data["auth_user"]["name"] == "Login User"
+    assert data["auth_user"]["email"] == "user@test.com"
+    assert data["auth_user"]["name"] == "User"
 
 
 def test_login_invalid_credentials(client):
-    """Test login with invalid credentials."""
     # Register user
     client.post(
         "/api/auth/register",
         json={
-            "email": "user@example.com",
-            "password": "correctpass",
+            "email": "user@test.com",
+            "password": "pass123",
             "name": "User",
         },
     )
@@ -106,24 +102,23 @@ def test_login_invalid_credentials(client):
     # Wrong password
     response = client.post(
         "/api/auth/login",
-        json={"email": "user@example.com", "password": "wrongpass"},
+        json={"email": "user@test.com", "password": "wrongpass123"},
     )
     assert response.status_code == 401
 
     # Non-existent email
     response = client.post(
         "/api/auth/login",
-        json={"email": "nonexistent@example.com", "password": "somepass"},
+        json={"email": "notuser@test.com", "password": "pass123"},
     )
     assert response.status_code == 401
 
 
 def test_login_missing_fields(client):
-    """Test login with missing fields."""
-    response = client.post(
-        "/api/auth/login", json={"email": "user@example.com"}
-    )
+    # Missing email
+    response = client.post("/api/auth/login", json={"email": "user@test.com"})
     assert response.status_code == 400
 
+    # Missing password
     response = client.post("/api/auth/login", json={"password": "pass123"})
     assert response.status_code == 400
