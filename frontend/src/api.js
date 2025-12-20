@@ -145,21 +145,23 @@ export async function deleteExpense(tricountId, expenseId) {
 
 
 export async function exportExcel(tricountId) {
-  const res = await fetch(`/api/tricounts/${tricountId}/export/excel`, {
-    headers: {
-      ...getAuthHeaders(),
-    },
-  });
+  const res = await fetch(
+    `${API_BASE}/tricounts/${tricountId}/export/excel`,
+    {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    }
+  );
 
-  
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || "Export impossible.");
   }
 
-  
   return res.blob();
 }
+
 
 
 export async function inviteTricount(tricountId) {
