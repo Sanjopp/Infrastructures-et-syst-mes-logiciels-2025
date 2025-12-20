@@ -1,0 +1,49 @@
+[
+  {
+    "id": "c99703bb-02b8-4d6a-9e2a-15f65cc690b7",
+    "owner_email": "user1@prod.com",
+    "name": "3Compte",
+    "currency": "EUR",
+    "users": [
+      {
+        "id": "a9ba1ff0-cc0c-41fc-a8ab-6373ccd79a9c",
+        "name": "User1",
+        "email": "user1@prod.com"
+      },
+      {
+        "id": "ae697a3a-5adc-4fcb-a58c-4e15ab9f8ac1",
+        "name": "User2",
+        "email": "user2@prod.com"
+      }
+    ],
+    "expenses": [
+      {
+        "id": "5637300f-b776-44f8-97f6-be74f14f9a35",
+        "description": "Expense1",
+        "amount": 100.0,
+        "currency": "EUR",
+        "payer_id": "a9ba1ff0-cc0c-41fc-a8ab-6373ccd79a9c",
+        "participants_ids": [
+          "a9ba1ff0-cc0c-41fc-a8ab-6373ccd79a9c",
+          "ae697a3a-5adc-4fcb-a58c-4e15ab9f8ac1"
+        ],
+        "weights": {}
+      },
+      {
+        "id": "093acb18-7213-4f62-b5cc-2010cf436be1",
+        "description": "Expense2",
+        "amount": 100.0,
+        "currency": "EUR",
+        "payer_id": "ae697a3a-5adc-4fcb-a58c-4e15ab9f8ac1",
+        "participants_ids": [
+          "a9ba1ff0-cc0c-41fc-a8ab-6373ccd79a9c",
+          "ae697a3a-5adc-4fcb-a58c-4e15ab9f8ac1"
+        ],
+        "weights": {
+          "a9ba1ff0-cc0c-41fc-a8ab-6373ccd79a9c": 1,
+          "ae697a3a-5adc-4fcb-a58c-4e15ab9f8ac1": 3
+        }
+      }
+    ]
+  }
+]

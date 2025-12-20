@@ -9,7 +9,7 @@ services:
     restart: always
     volumes:
       - ./backend:/app/backend
-      - ./data:/app/data
+      - ./data/dev:/app/data
     env_file:
       - .env
 
