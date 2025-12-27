@@ -23,6 +23,7 @@ frontend/
 
 The `src/` folder contains the React application logic:
 
+```
 src/
 ├── components/          # Reusable UI building blocks
 │   ├── Auth.jsx         # Login/Registration forms and logic
@@ -32,3 +33,4 @@ src/
 ├── App.jsx              # Main container handling routing and auth state
 ├── index.css            # Base styles
 └── main.jsx             # The entry point that renders the React App
+```

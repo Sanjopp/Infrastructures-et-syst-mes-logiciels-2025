@@ -2,14 +2,14 @@
 
 This collaborative student project is aiming to rebuild the core features of Tricount from scratch. The goal is to design a clean, intuitive system that allows users to split expenses, track balances, and settle debts seamlessly within a group.
 
-The frontend of this application was developed with the help of a real frontend developer, working in the same company as one of the group members.
+The frontend of this application was developed with the guidance and advices of a real frontend developer, working in the same company as one of the group members.
 
 ## Run the Application
 
 **ℹ️ Important**
 Docker Engine must be installed and running for the application to work.
 
-### .env File
+### `.env` File
 
 You need an `.env` file looking like
 ```
@@ -39,7 +39,7 @@ docker compose -f docker-compose.prod.yaml up
 
 ### Accessing the Application
 
-The application is running at http://localhost:5173
+The application will be running at http://localhost:5173
 
 ### Stopping the Application
 
