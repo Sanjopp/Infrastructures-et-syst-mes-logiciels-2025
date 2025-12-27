@@ -7,7 +7,7 @@ from backend.models.auth_user import AuthUser
 DATA_FILE = Path("data/users.json")
 
 
-def load_users():
+def load_users() -> list[AuthUser]:
     if not DATA_FILE.exists() or DATA_FILE.stat().st_size == 0:
         return []
     try:
@@ -18,7 +18,7 @@ def load_users():
         return []
 
 
-def save_users(users):
+def save_users(users: list[AuthUser]) -> None:
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(DATA_FILE, "w") as f:
         json.dump([asdict(u) for u in users], f, indent=2)
