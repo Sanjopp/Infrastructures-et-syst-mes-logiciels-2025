@@ -1,13 +1,13 @@
 [
   {
     "email": "user1@prod.com",
-    "password_hash": "$2b$12$ho4cR1eKdNNNfFcAkRUBae32KaYQW5/SZforbsNrWkdjeoHgtBU5G",
+    "password_hash": "$2b$12$8p2gJhLrlzNpThttJjgKd.kxCPQXjvoZ7iCwe/vm8XStYH6hjQi/S",
     "name": "User1",
     "id": "c0746ff4-d9b5-47a7-b662-b834783b91ab"
   },
   {
     "email": "user2@prod.com",
-    "password_hash": "$2b$12$OLCfilnTXF232EY/YU.41.I2LSo1UuSG24WvPTgFgG01R1cMdPGXi",
+    "password_hash": "$2b$12$2F4/0wc8u6KKiZHFLGB8Y.6F.S7iid.2o4BcnnA73jPeay6rSkSA.",
     "name": "User2",
     "id": "939b57e9-1c61-4722-8d64-67a774b2c326"
   }

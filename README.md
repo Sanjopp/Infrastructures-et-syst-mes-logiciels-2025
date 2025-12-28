@@ -89,6 +89,24 @@ The application provides a centralized platform for managing group expenses and 
 
 - Projects can be exported to Excel, allowing users to perform external analysis, reporting, or archiving.
 
+## Sample Data
+
+Two fake users and one fake project have been created for demonstration purposes.
+
+If you don't want to create a new user, you can connect to the application with the following credentials:
+
+```
+UserName: user1@prod.com
+Password: Password123/1
+```
+
+or
+
+```
+UserName: user2@prod.com
+Password: Password123/2
+```
+
 ## For Developers
 
 ### Pre-commit
