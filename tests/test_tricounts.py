@@ -226,4 +226,4 @@ def test_unauthorized_access_to_tricount(client):
 
     # User 2 tries to access User 1's tricount
     response = client.get(f"/api/tricounts/{tricount_id}", headers=headers2)
-    assert response.status_code == 403
+    assert response.status_code == 404

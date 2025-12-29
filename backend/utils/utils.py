@@ -73,7 +73,7 @@ def get_tricount_from_id(
 ) -> Tricount:
     t = next((t for t in tricounts if t.id == tricount_id), None)
     if not t:
-        abort(404, "3Compte non trouvé")
+        abort(404, description="3Compte non trouvé")
 
     return t
 
@@ -90,7 +90,10 @@ def get_tricount_from_id_with_permissions(
         t.owner_email == user_email
         or (any(u.email == user_email for u in t.users) and not owner_needed)
     ):
-        abort(403, "Vous n'avez pas la permission d'effectuer cette action.")
+        abort(
+            404,
+            description="Vous n'avez pas les permissions nécessaires pour réaliser cette action",
+        )
 
     return t
 

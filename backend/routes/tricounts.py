@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, abort, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from backend.models.currency import Currency
@@ -42,11 +42,11 @@ def list_tricounts():
 @jwt_required()
 def create_tricount():
     user_email = get_jwt_identity()
-    payload = request.get_json() or {}
+    payload = request.get_json(silent=True) or {}
     name = (payload.get("name") or "").strip()
 
     if not name:
-        return jsonify({"error": "Un nom est requis"}), 400
+        abort(400, description="Un nom est requis")
 
     tricount = Tricount(
         name=name, owner_email=user_email, currency=Currency.EUR
@@ -76,19 +76,16 @@ def add_user(tricount_id: str):
     )
     user_email = get_jwt_identity()
 
-    payload = request.get_json() or {}
+    payload = request.get_json(silent=True) or {}
     name = (payload.get("name") or "").strip()
     email = (payload.get("email") or "").strip() or user_email
 
     if not name:
-        return jsonify({"error": "Un nom est requis"}), 400
+        abort(400, description="Un nom est requis")
 
     if any(u.name == name for u in tricount.users):
-        return (
-            jsonify(
-                {"error": "Ce nom est déjà utilisé par un autre utilisateur"}
-            ),
-            409,
+        abort(
+            409, description="Ce nom est déjà utilisé par un autre utilisateur"
         )
 
     user = tricount.add_user(name=name, email=email)
@@ -143,7 +140,7 @@ def add_expense(tricount_id: str):
         user_email=get_jwt_identity(),
     )
 
-    payload = request.get_json() or {}
+    payload = request.get_json(silent=True) or {}
     description = (payload.get("description") or "").strip()
     amount = payload.get("amount")
     payer_id = payload.get("payer_id")
@@ -152,17 +149,17 @@ def add_expense(tricount_id: str):
     weights = payload.get("weights") or {}
 
     if not description:
-        return jsonify({"error": "La description est requise"}), 400
+        abort(400, description="La description est requise")
 
     try:
         amount = float(amount)
     except Exception:
-        return jsonify({"error": "Le montant doit être un nombre"}), 400
+        abort(400, description="Le montant doit être un nombre")
 
     if not payer_id:
-        return jsonify({"error": "Le payeur est requis"}), 400
+        abort(400, description="Le payeur est requis")
     if not participants_ids:
-        return jsonify({"error": "Au moins un participant est requis"}), 400
+        abort(400, description="Au moins un participant est requis")
 
     tricount.add_expense(
         description=description,
@@ -268,17 +265,17 @@ def join_tricount(tricount_id: str):
     tricount = get_tricount_from_id(
         tricount_id=tricount_id, tricounts=tricounts
     )
+    payload = request.get_json(silent=True) or {}
 
-    payload = request.get_json() or {}
     name = (payload.get("name") or "").strip()
     user_id = payload.get("user_id")
-    email = (payload.get("email") or "").strip() or user_email
+    email = user_email
 
     if not user_id:
+        if not name:
+            abort(400, description="Un nom est requis")
         user = tricount.add_user(name=name, email=email)
     else:
-        if not name:
-            return jsonify({"error": "Un nom est requis"}), 400
         user = tricount.modify_user_email(user_id=user_id, email=user_email)
 
     save_tricounts(tricounts=tricounts)
