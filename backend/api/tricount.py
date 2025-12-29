@@ -4,6 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 
 from backend.extensions import bcrypt, jwt
 from backend.routes.auth import auth_bp
@@ -23,6 +24,11 @@ bcrypt.init_app(app)
 
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(tricount_bp, url_prefix="/api/tricounts")
+
+
+@app.errorhandler(HTTPException)
+def handle_http_exception(e):
+    return jsonify({"error": e.description}), e.code
 
 
 @app.route("/")

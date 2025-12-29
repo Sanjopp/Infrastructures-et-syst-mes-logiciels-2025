@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import create_access_token
 
 from backend.extensions import bcrypt
@@ -16,11 +16,11 @@ def register():
     name = data.get("name")
 
     if not email or not password or not name:
-        return jsonify({"error": "Email, mot de passe ou nom manquant"}), 400
+        abort(400, description="Email, mot de passe ou nom manquant")
 
     auth_users = load_users()
     if any(u.email == email for u in auth_users):
-        return jsonify({"error": "Cet email est déjà utilisé"}), 409
+        abort(409, description="Cet email est déjà utilisé")
     hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
 
     new_auth_user = AuthUser(email=email, password_hash=hashed_pw, name=name)
@@ -40,7 +40,7 @@ def login():
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"error": "Email ou mot de passe manquant"}), 400
+        abort(400, description="Email ou mot de passe manquant")
 
     auth_users = load_users()
 
@@ -65,4 +65,4 @@ def login():
             200,
         )
 
-    return jsonify({"error": "Identifiants non valides"}), 401
+    abort(401, description="Identifiants non valides")

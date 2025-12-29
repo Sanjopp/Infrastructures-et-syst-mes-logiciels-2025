@@ -34,7 +34,7 @@ export default function Dashboard({ user, onLogout }) {
   const [joinStep, setJoinStep] = useState("idle");
   const [joinTricountId, setJoinTricountId] = useState("");
   const [joinUsers, setJoinUsers] = useState([]);
-  const [joinExistingUserId, setJoinExistingUserId] = useState(null);
+  const [joinExistingUserId, setJoinExistingUserId] = useState("");
   const [joinNewUserName, setJoinNewUserName] = useState("");
 
   useEffect(() => {
@@ -211,6 +211,10 @@ export default function Dashboard({ user, onLogout }) {
     setError("");
 
     try {
+      if (!joinTricountId || joinTricountId.trim() === "") {
+        setError("Veuillez renseigner un id.");
+        return;
+      }
       const users = await getUsers(joinTricountId);
 
       const alreadyJoined = users.some(
@@ -230,34 +234,34 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
-  async function handleConfirmJoin() {
-    try {
-      let payload = {};
+async function handleConfirmJoin() {
+  try {
+    let payload = {};
 
-      if (joinExistingUserId) {
-        payload = {
-          user_id: joinExistingUserId,
-        };
-      } else {
-        payload = {
-          name: joinNewUserName,
-        };
-      }
-
-      await joinTricount(joinTricountId);
-
-      setJoinStep("idle");
-      setJoinTricountId("");
-      setJoinUsers([]);
-      setJoinExistingUserId("");
-      setJoinNewUserName("");
-
-      await loadTricounts();
-    } catch (e) {
-      console.error(e);
-      setError(e.message);
+    if (joinNewUserName.trim() !== "") {
+      payload = { name: joinNewUserName.trim() };
     }
+    else if (joinExistingUserId && joinExistingUserId !== "") {
+      payload = { user_id: joinExistingUserId };
+    }
+    else {
+      setError("Veuillez choisir un utilisateur ou entrer un nom.");
+      return;
+    }
+
+    await joinTricount(joinTricountId, payload);
+
+    setJoinStep("idle");
+    setJoinTricountId("");
+    setJoinUsers([]);
+    setJoinExistingUserId("");
+    setJoinNewUserName("");
+    await loadTricounts();
+  } catch (e) {
+    console.error(e);
+    setError(e.message);
   }
+}
 
   function toggleParticipant(id) {
     setParticipants((prev) => {
@@ -402,8 +406,11 @@ export default function Dashboard({ user, onLogout }) {
                 <div className="space-y-1">
                   <label className="text-xs font-semibold">Utilisateur existant</label>
                   <select
-                    value={joinExistingUserId}
-                    onChange={(e) => setJoinExistingUserId(e.target.value)}
+                    value={joinExistingUserId || ""}
+                    onChange={(e) => {
+                      setJoinExistingUserId(e.target.value);
+                      if (e.target.value) setJoinNewUserName("");
+                    }}
                     className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
                   >
                     <option value="">— Sélectionner —</option>
@@ -421,9 +428,11 @@ export default function Dashboard({ user, onLogout }) {
                   <label className="text-xs font-semibold">Créer un nouvel utilisateur</label>
                   <input
                     type="text"
-                    placeholder="Nom"
                     value={joinNewUserName}
-                    onChange={(e) => setJoinNewUserName(e.target.value)}
+                    onChange={(e) => {
+                      setJoinNewUserName(e.target.value);
+                      if (e.target.value) setJoinExistingUserId("");
+                    }}
                     className="w-full rounded border border-slate-300 px-2 py-1 text-xs dark:bg-slate-950 dark:border-slate-700"
                   />
                 </div>
